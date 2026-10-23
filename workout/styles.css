@@ -285,3 +285,7 @@ details.group > div { padding: 0 0 16px; }
   .vrow { grid-template-columns: 96px 1fr 32px; }
   .hero .title { font-size: 2.3rem; }
 }
+
+/* Supersets and time estimates */
+.ss-label { display: flex; flex-direction: column; gap: 2px; margin: 18px 0 2px; padding-left: 12px; border-left: 3px solid var(--text); font-size: .85rem; color: var(--muted); }
+.r-card .r-meta { margin-top: 6px; font-weight: 600; color: var(--text); }

@@ -2,7 +2,10 @@
 import { EXERCISES, ROUTINES } from './data.js';
 
 const KEY = 'liftlog.v1';
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
+// Fingerprints of earlier built-in home-split routines, so unedited copies are replaced quietly.
+const KNOWN_BUILTIN = new Set(['21c37897', '61de1b0a', 'aa5642e2', 'a4f4c0c8']);
+const fingerprint = (r) => { let x = 5381; for (const c of r.name + JSON.stringify(r.items)) x = ((x * 33) ^ c.charCodeAt(0)) >>> 0; return x.toString(16); };
 const HOME_SPLIT = ['home-push-a', 'home-pull-a', 'home-push-b', 'home-pull-b'];
 
 export const DEFAULT_SETTINGS = {
@@ -42,16 +45,20 @@ export function load() {
   s = { ...fresh(), ...s, settings: { ...DEFAULT_SETTINGS, ...(s.settings || {}) } };
   if ((s.seedVersion || 0) < SEED_VERSION) {
     if ((s.seedVersion || 0) >= 1) {
-      // v2 replaces the home split with the chest-priority version. Old copies are kept, not deleted.
+      // Newer built-in home split replaces the old one. A copy is kept only if you had edited it.
+      let kept = 0;
       for (const id of HOME_SPLIT) {
         const old = s.routines.find((r) => r.id === id);
         const next = ROUTINES.find((r) => r.id === id);
-        if (!old || (old.name === next.name && JSON.stringify(old.items) === JSON.stringify(next.items))) continue;
-        s.routines.push({ ...structuredClone(old), id: `${id}-v1-${Date.now().toString(36)}`, group: 'Old versions (safe to delete)', name: `${old.name} (old)` });
+        if (!old || fingerprint(old) === fingerprint(next)) continue;
+        if (!KNOWN_BUILTIN.has(fingerprint(old))) {
+          s.routines.push({ ...structuredClone(old), id: `${id}-old-${Date.now().toString(36)}`, group: 'Old versions (safe to delete)', name: `${old.name} (old)` });
+          kept++;
+        }
         s.routines = s.routines.filter((r) => r !== old);
       }
-      s.settings.programStart = new Date().toISOString().slice(0, 10);
-      s.upgradeNote = 'Your home split was updated to the chest-priority version. The old versions are under "Old versions" in Routines.';
+      if (!s.settings.programStart) s.settings.programStart = new Date().toISOString().slice(0, 10);
+      s.upgradeNote = `Your home split now fits in 45 minutes, using supersets that need no rack changes.${kept ? ' Your edited versions are under "Old versions" in Plans.' : ''}`;
     }
     // Add built-in routines that aren't present yet; never overwrite edits.
     const have = new Set(s.routines.map((r) => r.id));

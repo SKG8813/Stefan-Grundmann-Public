@@ -86,35 +86,37 @@ const S = {
 
 const item = (exId, sets, station, opts = {}) => ({ exId, sets, station, ...opts });
 
+// Band warm-up as one circuit (ss = superset group: consecutive items alternate, rest after the round).
 const BANDS = [
-  item('band-external-rotation', 2, S.bands),
-  item('band-internal-rotation', 2, S.bands),
-  item('band-pull-apart', 2, S.bands),
+  item('band-external-rotation', 2, S.bands, { ss: 'W' }),
+  item('band-internal-rotation', 2, S.bands, { ss: 'W' }),
+  item('band-pull-apart', 2, S.bands, { ss: 'W' }),
 ];
 
 export const ROUTINES = [
   // 4-day home Push/Pull split, chest priority: ~18 direct chest sets/week over 2 days,
   // flat + incline pressing, push days all upper body. `ramp` = sets for the first 2 sessions.
+  // Each day fits 45 min including the band warm-up. Supersets (`ss`) only pair a rack exercise
+  // with dumbbells or bands, or two moves on the same pull-up bar, so nothing on the rack changes.
   { id: 'home-push-a', group: 'Home split', name: 'Push A: Chest', items: [
     ...BANDS,
     item('barbell-bench-press', 4, S.bench, { ramp: 3, note: 'Chest first while you\'re fresh.' }),
-    item('barbell-incline-bench-press', 3, S.incline, { ramp: 2, note: 'Same hooks; set the bench to about 30°.' }),
-    item('barbell-shrug', 3, S.bench, { note: 'Same hook height as bench.' }),
-    item('barbell-lying-tricep-extension', 3, S.bench),
+    item('barbell-incline-bench-press', 3, S.incline, { ramp: 2, rest: 120, note: 'Same hooks; set the bench to about 30°.' }),
+    item('barbell-shrug', 3, S.bench, { ss: 'A', note: 'Same hook height as bench.' }),
+    item('dumbbell-lateral-raise', 3, S.bench, { ss: 'A' }),
+    item('barbell-lying-tricep-extension', 3, S.bench, { ss: 'B' }),
+    item('dumbbell-fly', 2, S.bench, { ss: 'B', repMin: 15, repMax: 25, note: 'Light dumbbells: 3-second lowering and a 1-second pause in the stretch, close to failure.' }),
     item('deficit-push-up', 2, S.pushup, { note: 'Go deep between the plates; stop 1–2 reps short of failure.' }),
-    item('dumbbell-fly', 2, S.db, { repMin: 15, repMax: 25, rest: 75, note: 'Light dumbbells: 3-second lowering and a 1-second pause in the stretch, close to failure.' }),
-    item('dumbbell-lateral-raise', 3, S.db),
   ] },
   { id: 'home-pull-a', group: 'Home split', name: 'Pull A: Lats + Squat', items: [
     ...BANDS,
-    item('pull-up', 3, S.pullup),
-    item('chin-up', 2, S.pullup),
-    item('hanging-straight-leg-hip-raise', 3, S.pullup),
-    item('barbell-curl', 3, S.pullup, { note: 'Bar is already out of the rack.' }),
-    item('barbell-bent-over-row', 3, S.floor),
+    item('pull-up', 3, S.pullup, { rest: 120 }),
+    item('chin-up', 2, S.pullup, { ss: 'A' }),
+    item('hanging-straight-leg-hip-raise', 3, S.pullup, { ss: 'A' }),
+    item('barbell-curl', 3, S.pullup, { ss: 'B', note: 'Bar is already out of the rack.' }),
+    item('dumbbell-rear-delt-fly', 3, S.pullup, { ss: 'B' }),
+    item('barbell-bent-over-row', 3, S.floor, { rest: 120 }),
     item('barbell-squat', 3, S.squat, { note: 'Only leg move today. Bar back into the rack at squat height.' }),
-    item('dumbbell-rear-delt-fly', 3, S.db),
-    item('dumbbell-hammer-curl', 2, S.db),
   ] },
   { id: 'home-push-b', group: 'Home split', name: 'Push B: Upper Chest & Shoulders', items: [
     ...BANDS,
@@ -122,19 +124,17 @@ export const ROUTINES = [
     item('deficit-push-up', 3, S.pushup, { ramp: 2 }),
     item('single-arm-landmine-press', 3, S.landmine),
     item('landmine-twist', 3, S.landmine),
-    item('tricep-dip', 3, S.dips, { note: 'Stay upright; stop at upper arm parallel. Skip if the shoulder complains.' }),
-    item('dumbbell-lateral-raise', 3, S.db),
+    item('tricep-dip', 3, S.dips, { ss: 'A', note: 'Stay upright; stop at upper arm parallel. Skip if the shoulder complains.' }),
+    item('dumbbell-lateral-raise', 3, S.dips, { ss: 'A' }),
   ] },
   { id: 'home-pull-b', group: 'Home split', name: 'Pull B: Back Thickness', items: [
     ...BANDS,
     item('barbell-deadlift', 3, S.floor, { note: 'Only leg move today.' }),
-    item('barbell-curl', 3, S.floor),
-    item('chin-up', 3, S.pullup),
-    item('pull-up', 2, S.pullup),
-    item('hanging-straight-leg-hip-raise', 3, S.pullup),
-    item('landmine-row', 3, S.landmine),
-    item('dumbbell-rear-delt-fly', 3, S.db),
-    item('dumbbell-hammer-curl', 3, S.db),
+    item('barbell-curl', 3, S.floor, { ss: 'A' }),
+    item('dumbbell-rear-delt-fly', 3, S.floor, { ss: 'A' }),
+    item('chin-up', 3, S.pullup, { ss: 'B' }),
+    item('hanging-straight-leg-hip-raise', 3, S.pullup, { ss: 'B' }),
+    item('landmine-row', 3, S.landmine, { rest: 120 }),
   ] },
 
   // Historical routines, home versions (swapped to owned equipment, ordered by station)
