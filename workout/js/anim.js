@@ -228,7 +228,7 @@ export const ANIM = {
   'band-internal-rotation': { view: 'front', zoom: 1.7, a: { ...FRONT, fh: 70 }, b: { ...FRONT, fh: -75 }, eq: [{ k: 'cable', from: [194, 57], to: 'WR', band: true, behind: true }, POST_R] },
   'band-pull-apart': { view: 'front', zoom: 1.7, a: { ...FRONT, ah: 12 }, b: { ...FRONT, ah: 88 }, eq: [{ k: 'cable', from: 'WL', to: 'WR', band: true }] },
   'band-face-pull': {
-    a: { ...STAND, uh: 0, fa: 90 }, b: { ...STAND, uh: 108, fa: 172 },
+    a: { ...STAND, uh: 0, fa: 90 }, b: { ...STAND, uh: 108, fa: 145 },
     eq: [{ k: 'cable', from: [194, 26], band: true }, POST_R],
   },
   'barbell-bench-press': bench([{ hand: [6, -53] }, { hand: [14, -18] }]),
@@ -236,10 +236,10 @@ export const ANIM = {
   'barbell-incline-bench-press': incline([{ k: 'plate', r: 15 }]),
   'barbell-close-grip-incline-bench-press': incline([{ k: 'plate', r: 15 }]),
   'dumbbell-incline-bench-press': incline([{ k: 'db' }]),
-  'barbell-squat': { a: { ...STAND, ...BACK_BAR }, b: { ...STAND, ...BACK_BAR, th: 82, sh: -28, t: 38 }, eq: [{ k: 'plate', r: 12 }] },
-  'barbell-deadlift': deadlift({ t: 55, th: 72, sh: -20 }),
-  'hex-bar-deadlift': deadlift({ t: 38, th: 66, sh: -18 }, 18),
-  'barbell-romanian-deadlift': { a: STAND, b: { ...STAND, t: 72, th: 22, sh: -8 }, eq: [{ k: 'plate', r: 18 }] },
+  'barbell-squat': { a: { ...STAND, ...BACK_BAR }, b: { ...STAND, ...BACK_BAR, th: 92, sh: -30, t: 40 }, eq: [{ k: 'plate', r: 12 }] },
+  'barbell-deadlift': deadlift({ t: 52, th: 80, sh: -12, ua: -4, fa: -4 }, 18),
+  'hex-bar-deadlift': deadlift({ t: 36, th: 74, sh: -20 }, 18),
+  'barbell-romanian-deadlift': { a: STAND, b: { ...STAND, t: 70, th: 24, sh: -6, ua: -22, fa: -22 }, eq: [{ k: 'plate', r: 18 }] },
   'barbell-bent-over-row': { a: { ...STAND, t: 58, th: 28, sh: -12, ua: 0, fa: 0 }, b: { ...STAND, t: 58, th: 28, sh: -12, ua: -62, fa: 8 }, eq: [{ k: 'plate', r: 16 }] },
   'barbell-shrug': { view: 'front', a: { ...FRONT, ua: 4, fa: 4, sy: 0 }, b: { ...FRONT, ua: 4, fa: 4, sy: -11 }, eq: [{ k: 'barH' }] },
   'barbell-curl': { a: { ...STAND, ua: 2, fa: 2 }, b: { ...STAND, ua: 8, fa: 158 }, eq: [{ k: 'plate', r: 14 }] },
@@ -248,7 +248,7 @@ export const ANIM = {
   'ez-bar-lying-tricep-extension': lyingExt,
   'barbell-standing-calf-raise': {
     a: { ...STAND, ...BACK_BAR, anchor: ['toe', [112, ANK + 2]], foot: 90 },
-    b: { ...STAND, ...BACK_BAR, anchor: ['toe', [112, ANK + 2]], foot: 48 }, eq: [{ k: 'plate', r: 12 }],
+    b: { ...STAND, ...BACK_BAR, anchor: ['toe', [112, ANK + 2]], foot: 38 }, eq: [{ k: 'plate', r: 12 }],
   },
   'barbell-overhead-press': { a: { ...STAND, hand: [13, 0], bend: 'down' }, b: { ...STAND, hand: [3, -53], bend: 'front' }, eq: [{ k: 'plate', r: 14 }] },
   'inverted-row': {
@@ -259,13 +259,13 @@ export const ANIM = {
   },
   'single-arm-landmine-press': {
     oneArm: true,
-    a: { ...STAND, t: 8, th: 10, sh: 0, th2: -20, sh2: -6, ua: 22, fa: 160, ua2: 0, fa2: 10 },
-    b: { ...STAND, t: 8, th: 10, sh: 0, th2: -20, sh2: -6, ua: 135, fa: 135, ua2: 0, fa2: 10 },
-    eq: [{ k: 'cable', from: [14, FLOOR - 2] }, { k: 'plate', r: 12 }],
+    a: { ...STAND, t: 8, th: 10, sh: 0, th2: -20, sh2: -6, hand: [12, 2], bend: 'down', ua2: 0, fa2: 10 },
+    b: { ...STAND, t: 8, th: 10, sh: 0, th2: -20, sh2: -6, hand: [36, -36], bend: 'down', ua2: 0, fa2: 10 },
+    eq: [{ k: 'cable', from: [194, FLOOR - 2] }, { k: 'plate', r: 12 }],
   },
   'landmine-row': {
-    a: { ...STAND, t: 62, th: 30, sh: -12 }, b: { ...STAND, t: 62, th: 30, sh: -12, ua: -55, fa: 12 },
-    eq: [{ k: 'cable', from: [196, FLOOR - 2] }, { k: 'plate', r: 13 }],
+    a: { ...STAND, t: 50, th: 34, sh: -12 }, b: { ...STAND, t: 50, th: 34, sh: -12, ua: -55, fa: 12 },
+    eq: [{ k: 'cable', from: [4, FLOOR - 2], behind: true }, { k: 'plate', r: 13 }],
   },
   'landmine-squat': {
     a: { ...STAND, rel: true, ua: 18, fa: 150 }, b: { ...STAND, rel: true, ua: 18, fa: 150, th: 82, sh: -28, t: 30 },
@@ -288,7 +288,7 @@ export const ANIM = {
     eq: [{ k: 'dot', at: [100, 12], r: 4 }],
   },
   'tricep-dip': {
-    a: { anchor: ['hand', [104, 76]], t: 14, th: 12, sh: -62, ua: 0, fa: 0, foot: 30 }, b: { anchor: ['hand', [104, 76]], t: 22, th: 18, sh: -55, ua: -78, fa: 16, foot: 30 },
+    a: { anchor: ['hand', [104, 76]], t: 5, th: 12, sh: -62, ua: 0, fa: 0, foot: 30 }, b: { anchor: ['hand', [104, 76]], t: 9, th: 18, sh: -55, ua: -82, fa: 8, foot: 30 },
     eq: [{ k: 'rect', x: 84, y: 76, w: 42, h: 5, cls: 'static-f' }, { k: 'line', pts: [[120, 81], [120, FLOOR]] }],
   },
   'hanging-straight-leg-hip-raise': {
