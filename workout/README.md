@@ -9,7 +9,7 @@ An offline iPhone web app for tracking lifts, with progression nudges, a shoulde
 - **Progression nudge.**
   - Barbell lifts suggest +5 lb after 2 sessions in a row where every set hits the top of the rep range. Shoulder-loading lifts need 3 in rehab mode.
   - Dumbbell lifts move up to the next dumbbell you own. At your heaviest dumbbell, they progress by an extra set or a slower tempo.
-  - The app also flags stalled lifts, suggests a lighter restart weight after a long break, and gives deload reminders.
+  - The app also flags stalled lifts and gives deload reminders. After a break of 4+ weeks it suggests restarting at 85% of your last weight for leg lifts, 60% for shoulder lifts in rehab mode and 75% for everything else (editable in Settings).
 - **🤕 Shoulder button.** It flags the set and lowers the next session's weight by about 10%. Progression pauses until you have a pain-free session. If a lift is flagged twice in a row, the app suggests checking with your physio.
 - **Rest timer.** It starts when you tick a set. Defaults: 2–3 minutes for compound lifts, 60–90 seconds for isolation lifts and 30 seconds for band work. It adds 30 seconds after missed reps, a set with 0 reps left in the tank, or a shoulder flag. It beeps, vibrates where the device supports it, and flashes when rest is over.
 - **Progress.** A coach summary, weekly sets per muscle against the 10–20 set range, a chart per exercise showing your injury date and pre-injury best, personal records and workout history.

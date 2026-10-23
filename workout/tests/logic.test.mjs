@@ -67,7 +67,12 @@ test('long break restarts lighter; shoulder lifts lighter still', () => {
   assert.equal(b.kind, 'return');
   assert.equal(b.weight, 100);
   const s = L.suggest(squat, { sets: 3 }, L.exerciseHistory(old, squat.id), settings, { today: '2026-10-23' });
-  assert.equal(s.weight, 155);
+  assert.equal(s.weight, 175);
+  const curl = EX['barbell-curl'];
+  const c = L.suggest(curl, { sets: 3 }, L.exerciseHistory([session('2024-11-19', curl.id, [[80, 10]])], curl.id), settings, { today: '2026-10-23' });
+  assert.equal(c.weight, 60);
+  const custom = L.suggest(squat, { sets: 3 }, L.exerciseHistory(old, squat.id), { ...settings, restartPctLegs: 90 }, { today: '2026-10-23' });
+  assert.equal(custom.weight, 185);
 });
 
 test('stall is detected after 3 sessions without more reps', () => {

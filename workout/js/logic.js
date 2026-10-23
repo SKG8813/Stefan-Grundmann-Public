@@ -1,6 +1,7 @@
 // Pure training logic: no DOM, no storage. Unit-tested in tests/logic.test.mjs.
 
 export const DAY = 86400000;
+export const LEG_MUSCLES = ['quads', 'hamstrings/glutes', 'calves'];
 
 export const slug = (s) => s.toLowerCase().trim().replace(/\(.*?\)/g, (m) => m.replace(/[()]/g, ''))
   .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -86,7 +87,9 @@ export function suggest(ex, target, history, settings, { deload = false, today =
   // Long layoff (or the first session after the injury): restart well below the old numbers.
   const gap = today ? daysBetween(last.date, today) : 0;
   if (gap > 28) {
-    const pct = settings.rehabMode && ex.shoulder ? 60 : 75;
+    const legs = ex.primary.some((m) => LEG_MUSCLES.includes(m));
+    const pct = settings.rehabMode && ex.shoulder ? settings.restartPctShoulder ?? 60
+      : legs ? settings.restartPctLegs ?? 85 : settings.restartPctOther ?? 75;
     const weeks = Math.round(gap / 7);
     if (lt === 'bodyweight') {
       const r = Math.max(3, Math.round(last.maxReps * 0.7));

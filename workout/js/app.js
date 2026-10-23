@@ -397,7 +397,7 @@ function coachCard() {
   const ids = recentExerciseIds(42);
   if (!ids.length) {
     return card(S.sessions.length
-      ? 'No training logged in the last 6 weeks. When you restart, each lift suggests a lighter restart weight (about 75%, or 60% for shoulder lifts in rehab mode) and builds back from there.'
+      ? `No training logged in the last 6 weeks. When you restart, each lift suggests a lighter restart weight (legs ${S.settings.restartPctLegs}%, shoulder lifts ${S.settings.restartPctShoulder}%, others ${S.settings.restartPctOther}% of your last weight) and builds back from there.`
       : 'Log a few workouts (or import your history) and suggestions will show up here.');
   }
   const groups = { up: [], pain: [], stall: [] };
@@ -518,6 +518,8 @@ function viewSettings() {
   ${card(`<b>Shoulder rehab</b>
     ${chk('rehabMode', 'Rehab mode: 🤕 button, slower progression on shoulder-loading lifts (3 clean sessions before adding weight)')}
     <div class="grid2"><label class="field">Injury date<input type="date" data-setting="injuryDate" value="${h(st.injuryDate)}"></label>${num('painDropPct', 'Drop after 🤕 (%)')}</div>
+    <p class="small">After a break of 4+ weeks, restart at this % of your last weight:</p>
+    <div class="grid2">${num('restartPctShoulder', 'Shoulder lifts (%)')}${num('restartPctLegs', 'Leg lifts (%)')}${num('restartPctOther', 'Other lifts (%)')}</div>
     <label class="field">Rehab note (stays on this phone; included in Claude reviews)<textarea data-setting="rehabNote" rows="2" placeholder="e.g. physio guidance, movements to avoid">${h(st.rehabNote)}</textarea></label>
     <p class="muted small">General guidance, not medical advice. If pain is sharp, lingers, or keeps coming back, stop that lift and check with your physio.</p>`)}
   ${card(`<b>Training</b><div class="grid2">${num('deloadWeeks', 'Deload every (weeks)')}</div>
