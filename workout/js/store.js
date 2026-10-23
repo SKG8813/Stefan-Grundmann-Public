@@ -2,7 +2,8 @@
 import { EXERCISES, ROUTINES } from './data.js';
 
 const KEY = 'liftlog.v1';
-const SEED_VERSION = 1;
+const SEED_VERSION = 2;
+const HOME_SPLIT = ['home-push-a', 'home-pull-a', 'home-push-b', 'home-pull-b'];
 
 export const DEFAULT_SETTINGS = {
   barWeight: 45,
@@ -23,12 +24,14 @@ export const DEFAULT_SETTINGS = {
   askRir: true,
   apiKey: '',
   model: 'claude-opus-5-5',
+  proteinPerKg: 1.6,
+  programStart: '',
 };
 
 function fresh() {
   return {
     schema: 1, seedVersion: 0, settings: { ...DEFAULT_SETTINGS }, customExercises: {},
-    routines: [], sessions: [], bodyweight: [], cardio: [], exNotes: {}, active: null, timer: null,
+    routines: [], sessions: [], bodyweight: [], cardio: [], exNotes: {}, protein: {}, active: null, timer: null,
   };
 }
 
@@ -37,9 +40,26 @@ export function load() {
   try { s = JSON.parse(localStorage.getItem(KEY)) || fresh(); } catch { s = fresh(); }
   s = { ...fresh(), ...s, settings: { ...DEFAULT_SETTINGS, ...(s.settings || {}) } };
   if ((s.seedVersion || 0) < SEED_VERSION) {
+    if ((s.seedVersion || 0) >= 1) {
+      // v2 replaces the home split with the chest-priority version. Old copies are kept, not deleted.
+      for (const id of HOME_SPLIT) {
+        const old = s.routines.find((r) => r.id === id);
+        const next = ROUTINES.find((r) => r.id === id);
+        if (!old || (old.name === next.name && JSON.stringify(old.items) === JSON.stringify(next.items))) continue;
+        s.routines.push({ ...structuredClone(old), id: `${id}-v1-${Date.now().toString(36)}`, group: 'Old versions (safe to delete)', name: `${old.name} (old)` });
+        s.routines = s.routines.filter((r) => r !== old);
+      }
+      s.settings.programStart = new Date().toISOString().slice(0, 10);
+      s.upgradeNote = 'Your home split was updated to the chest-priority version. The old versions are under "Old versions" in Routines.';
+    }
     // Add built-in routines that aren't present yet; never overwrite edits.
     const have = new Set(s.routines.map((r) => r.id));
-    for (const r of ROUTINES) if (!have.has(r.id)) s.routines.push(structuredClone(r));
+    const homeAt = s.routines.findIndex((r) => r.group === 'Home split' || r.group?.startsWith('From your history'));
+    const add = ROUTINES.filter((r) => !have.has(r.id)).map((r) => structuredClone(r));
+    const home = add.filter((r) => HOME_SPLIT.includes(r.id));
+    const rest = add.filter((r) => !HOME_SPLIT.includes(r.id));
+    s.routines = [...home, ...s.routines, ...rest];
+    if (homeAt < 0 && !s.settings.programStart) s.settings.programStart = new Date().toISOString().slice(0, 10);
     s.seedVersion = SEED_VERSION;
   }
   return s;

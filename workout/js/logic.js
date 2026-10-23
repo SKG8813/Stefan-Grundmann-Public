@@ -148,6 +148,11 @@ export function suggest(ex, target, history, settings, { deload = false, today =
           message: `Ready for the ${next} lb dumbbells. You hit ${repMax}+ on every set ${streak}× in a row.` };
       }
     }
+    if (lt === 'bodyweight' && ex.addLoad) {
+      const w = lastW + ex.addLoad;
+      return { ...base, kind: 'up', weight: w, need, streak,
+        message: `Ready to add load: put ${w} lb on your back (a plate or a loaded backpack). You hit ${repMax}+ on every set ${streak}× in a row.` };
+    }
     const moreSets = sets < 4;
     return { ...base, kind: 'tempo', weight: lastW, reps: repMax, sets: moreSets ? sets + 1 : sets, need, streak,
       message: lt === 'dumbbell'
@@ -279,6 +284,23 @@ export function injuryComparison(history, injuryISO) {
   const now = after.length ? Math.max(...after.map((h) => h.best1rm)) : null;
   return { pre: Math.round(pre), now: now == null ? null : Math.round(now), pct: now == null || !pre ? null : Math.round((now / pre) * 100) };
 }
+
+// Lean-gain check from bodyweight logs: compares 7-day averages ~2 weeks apart.
+// Target for a slim lifter building muscle: about +0.25-0.5% of bodyweight per week.
+export function gainCheck(entries, today) {
+  const ma = movingAverage(entries.filter((e) => e.date <= today));
+  if (ma.length < 3) return null;
+  const last = ma[ma.length - 1];
+  const prior = [...ma].reverse().find((e) => daysBetween(e.date, last.date) >= 12);
+  if (!prior || daysBetween(last.date, today) > 10) return null;
+  const weeks = daysBetween(prior.date, last.date) / 7;
+  const pct = ((last.avg - prior.avg) / prior.avg) * 100 / weeks;
+  const lbPerWeek = (last.avg - prior.avg) / weeks;
+  const status = pct < 0.15 ? 'low' : pct > 0.75 ? 'high' : 'ok';
+  return { pct: Math.round(pct * 100) / 100, lbPerWeek: Math.round(lbPerWeek * 10) / 10, status, weeks: Math.round(weeks * 10) / 10 };
+}
+
+export const proteinTarget = (lb, perKg = 1.6) => Math.round((lb / 2.2046) * perKg / 5) * 5;
 
 export function movingAverage(entries, days = 7) {
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));

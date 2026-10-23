@@ -120,6 +120,10 @@ export const HOWTO = {
     steps: ['Hang with an underhand grip, shoulder-width.', 'Pull your chest toward the bar, elbows down to your sides.', 'Chin over the bar.', 'Lower slowly.'],
     shoulder: 'Often easier on the shoulder than wide pull-ups.',
   },
+  'deficit-push-up': {
+    steps: ['Set two plates (or sturdy blocks) shoulder-width apart; hands on them, body in a straight line from head to heels.', 'Hands just outside shoulder-width, elbows angled about 45° from your body.', 'Lower until your chest drops below the level of your hands for a deep chest stretch.', 'Push the floor away until your arms are straight. Once 15+ reps feels easy, add a plate on your back or a loaded backpack.'],
+    shoulder: 'Push-ups let the shoulder blades move freely, which many people find easier on the shoulder than bench. Use a shallower depth if the bottom hurts.',
+  },
   'tricep-dip': {
     steps: ['Support yourself on the dip bars, arms straight, shoulders down (not shrugged).', 'Stay fairly upright with elbows pointing back. Leaning far forward shifts the work to the chest.', 'Lower until your upper arms are about parallel to the floor.', 'Press back up to straight arms.'],
     shoulder: 'Dips stress the front of the shoulder. Stop at parallel or higher, and skip them on days the shoulder is sore.',
