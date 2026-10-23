@@ -13,12 +13,12 @@ export const HOWTO = {
     shoulder: 'Use a wider grip or lighter band if the front of the shoulder complains.',
   },
   'band-face-pull': {
-    steps: ['Anchor the band at face height. Grab it with palms facing down.', 'Pull toward your forehead, elbows high and wide.', 'Finish with hands beside your ears, rotating the fists back.', 'Pause, then return slowly.'],
+    steps: ['Anchor the band at face height. Grab it with palms facing down.', 'Pull toward your forehead, elbows high and wide.', 'Finish with hands beside your ears and elbows at shoulder height, rotating the fists back.', 'Pause, then return slowly.'],
     shoulder: 'Great rehab exercise for the back of the shoulder. Keep the movement smooth.',
   },
   'barbell-bench-press': {
-    steps: ['Eyes under the bar, feet flat, shoulder blades pinched back and down.', 'Grip slightly wider than shoulders; unrack with straight arms.', 'Lower to the lower chest with elbows about 45–60° from your body.', 'Press up and slightly back toward your face.'],
-    shoulder: 'Keep elbows tucked (not flared to 90°), and stop just short of the chest if the bottom hurts. Always use the rack safeties.',
+    steps: ['Eyes under the bar, feet planted, glutes on the bench, shoulder blades pinched back and down.', 'Grip about 1.5× shoulder width or a little narrower; unrack with straight arms.', 'Lower under control to the lower chest, elbows angled roughly 45–70° from your body (not flared straight out).', 'Press up and slightly back so the bar finishes over your shoulders.'],
+    shoulder: 'A grip no wider than about 1.5× shoulder width lowers load on the top of the shoulder (AC joint). Stop just short of the chest if the bottom hurts. Always set the rack safeties.',
   },
   'barbell-incline-bench-press': {
     steps: ['Bench at 30–45°. Shoulder blades back and down.', 'Unrack and hold the bar over your upper chest.', 'Lower to the upper chest, just below the collarbones.', 'Press straight up.'],
@@ -33,15 +33,15 @@ export const HOWTO = {
     shoulder: 'Stop the descent where the shoulder still feels good.',
   },
   'barbell-squat': {
-    steps: ['Bar on the upper back (not the neck); hands just outside shoulders.', 'Feet shoulder-width, toes slightly out. Brace your core like you\'re about to be punched.', 'Sit down and back, knees tracking over toes, to at least thighs parallel.', 'Drive up through the whole foot, chest up.'],
+    steps: ['Bar on the upper back (not the neck); hands just outside shoulders.', 'Feet shoulder-width, toes slightly out. Brace your core like you\'re about to be punched.', 'Sit down between your hips, knees tracking over toes. Go as deep as you can with a flat back: at least thighs parallel. Deeper squats built more glute and inner-thigh muscle in research.', 'Drive up through the whole foot, chest up.'],
     shoulder: 'If holding the bar hurts the shoulder, widen your grip or use the landmine squat instead.',
   },
   'barbell-deadlift': {
-    steps: ['Bar over mid-foot, feet hip-width. Grip just outside the legs.', 'Hips down, chest up, back flat. Pull the slack out of the bar.', 'Push the floor away; bar drags up your legs.', 'Stand tall, then lower the same path, hips back first.'],
+    steps: ['Bar over mid-foot (about an inch from your shins), feet hip-width. Grip just outside the legs.', 'Bend your knees until the shins touch the bar. Hips end up above your knees, shoulders just in front of the bar, back flat. Pull the slack out.', 'Push the floor away; keep the bar touching your legs all the way up.', 'Stand tall without leaning back, then lower the same path: hips back first, then knees.'],
     shoulder: 'Arms just hang like hooks. Keep shoulders packed down, not shrugged.',
   },
   'barbell-romanian-deadlift': {
-    steps: ['Stand tall holding the bar, soft knees.', 'Push your hips back, bar sliding down the thighs, back flat.', 'Stop when you feel a strong hamstring stretch (usually just below the knees).', 'Squeeze glutes to stand up.'],
+    steps: ['Stand tall holding the bar, soft knees.', 'Push your hips back, keeping the bar touching your thighs (pull it in with your lats), back flat.', 'Stop when you feel a strong hamstring stretch (usually just below the knees).', 'Squeeze glutes to stand up.'],
     shoulder: 'Keep the bar close and shoulders pulled back; no rounding forward.',
   },
   'barbell-bent-over-row': {
@@ -61,7 +61,7 @@ export const HOWTO = {
     shoulder: 'Go light and keep it smooth. If the shoulder complains, swap for dips or close-grip bench.',
   },
   'barbell-standing-calf-raise': {
-    steps: ['Bar on your back as for squats; balls of feet on a plate for extra range.', 'Rise as high as possible onto your toes.', 'Pause at the top, then lower slowly into a full stretch.'],
+    steps: ['Bar on your back as for squats; balls of feet on a plate for extra range.', 'Rise as high as possible onto your toes, knees straight but not locked.', 'Pause at the top, then lower slowly into a full stretch and pause 1–2 seconds at the bottom. The stretched position matters most for growth.'],
     shoulder: '',
   },
   'barbell-overhead-press': {
@@ -73,11 +73,11 @@ export const HOWTO = {
     shoulder: 'Very shoulder-friendly rowing option.',
   },
   'single-arm-landmine-press': {
-    steps: ['Bar end in the landmine; hold the other end at shoulder height in one hand.', 'Stagger your stance, brace core.', 'Press up and forward until the arm is straight.', 'Lower slowly back to the shoulder.'],
+    steps: ['Stand facing the landmine. Hold the loaded end at shoulder height in one hand.', 'Stagger your stance, brace your core, hips square (don\'t twist toward the pressing arm).', 'Press up and forward along the bar\'s arc until the arm is nearly straight.', 'Lower slowly back to the shoulder.'],
     shoulder: 'The angled path is one of the best overhead options while rehabbing.',
   },
   'landmine-row': {
-    steps: ['Straddle the bar facing the landmine, hinge forward with a flat back.', 'Grab the bar under the plates (or with a V-handle).', 'Row it to your stomach, elbows back.', 'Lower under control.'],
+    steps: ['Straddle the bar facing the loaded end, with the landmine anchor behind you.', 'Grab the bar just below the plates (or hook a V-handle under it), then hinge to about 45° with a flat back.', 'Row it to your stomach, elbows back, squeezing the shoulder blades.', 'Lower until the arms are straight, under control.'],
     shoulder: '',
   },
   'landmine-squat': {
@@ -89,8 +89,8 @@ export const HOWTO = {
     shoulder: 'Keep it slow and light.',
   },
   'dumbbell-lateral-raise': {
-    steps: ['Stand tall, dumbbells at your sides, slight bend in elbows.', 'Raise the arms out to the sides to shoulder height, leading with the elbows.', 'Thumbs level or slightly up.', 'Lower slowly over 2–3 seconds.'],
-    shoulder: 'Raise slightly forward of straight sideways (the "scapular plane"); stop at shoulder height.',
+    steps: ['Stand tall, dumbbells at your sides, slight bend in elbows.', 'Raise the arms to shoulder height about 30° in front of straight out to the side (the "scapular plane"), leading with the elbows.', 'Keep thumbs level or slightly up. Don\'t tip the thumbs down like pouring a jug.', 'Lower slowly over 2–3 seconds.'],
+    shoulder: 'The scapular-plane, thumbs-up version leaves more room in the shoulder joint than raising straight out with thumbs down. Stop at shoulder height.',
   },
   'dumbbell-rear-delt-fly': {
     steps: ['Hinge forward until your chest is almost parallel to the floor.', 'Dumbbells hanging, slight bend in elbows.', 'Raise the arms out to the sides, squeezing the back of the shoulders.', 'Lower slowly.'],
@@ -121,7 +121,7 @@ export const HOWTO = {
     shoulder: 'Often easier on the shoulder than wide pull-ups.',
   },
   'tricep-dip': {
-    steps: ['Support yourself on the dip bars, arms straight.', 'Lean slightly forward, elbows pointing back.', 'Lower until upper arms are about parallel to the floor.', 'Press back up.'],
+    steps: ['Support yourself on the dip bars, arms straight, shoulders down (not shrugged).', 'Stay fairly upright with elbows pointing back. Leaning far forward shifts the work to the chest.', 'Lower until your upper arms are about parallel to the floor.', 'Press back up to straight arms.'],
     shoulder: 'Dips stress the front of the shoulder. Stop at parallel or higher, and skip them on days the shoulder is sore.',
   },
   'hanging-straight-leg-hip-raise': {
@@ -153,7 +153,7 @@ export const HOWTO = {
     shoulder: 'Keep it smooth and light.',
   },
   'hex-bar-deadlift': {
-    steps: ['Stand inside the trap bar, handles at your sides.', 'Hips down, chest up, back flat.', 'Push the floor away until standing tall.', 'Lower with control.'],
+    steps: ['Stand inside the trap bar, handles at your sides.', 'Bend knees and hips (more knee bend than a regular deadlift), chest up, back flat.', 'Push the floor away until standing tall.', 'Lower with control.'],
     shoulder: 'Neutral grip is easy on the shoulders.',
   },
 };
