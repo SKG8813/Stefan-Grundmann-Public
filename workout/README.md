@@ -5,7 +5,7 @@ An offline iPhone web app for tracking lifts, with progression nudges, a shoulde
 ## Features
 
 - **Routines.** A 4-day home Push/Pull split built for muscle growth, plus home and gym versions of the routines from your Caliber history. Each day is ordered so the rack only changes when it has to, and the app shows a "Setup change" banner at each change. You can create, copy, edit and reorder routines.
-- **How to.** Every exercise has a How to button with short form cues, a shoulder-safety tip in rehab mode, and a link to YouTube videos.
+- **How to.** Every exercise has a How to button with an animated stick-figure demo, short form cues, a shoulder-safety tip in rehab mode, and a link to YouTube videos.
 - **Logging.** Each set is pre-filled with the suggested weight and reps, so one tap on ✓ logs it. Each set also has an optional "reps left in tank" (RIR) rating. Extras: warm-up set generator, plate calculator, exercise swap, and notes per exercise and per workout. The screen stays awake during a workout, and an unfinished workout resumes after the app is closed.
 - **Progression nudge.**
   - Barbell lifts suggest +5 lb after 2 sessions in a row where every set hits the top of the rep range. Shoulder-loading lifts need 3 in rehab mode.

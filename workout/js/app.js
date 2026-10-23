@@ -3,6 +3,7 @@ import * as L from './logic.js';
 import { load, save, exerciseMap, exportJSON, importJSON, uid, DEFAULT_SETTINGS } from './store.js';
 import { lineChart } from './charts.js';
 import { HOWTO, videoURL } from './howto.js';
+import { ANIM, mountAnimation } from './anim.js';
 
 let S = load();
 let EX = exerciseMap(S);
@@ -297,11 +298,13 @@ document.addEventListener('visibilitychange', () => { updateWakeLock(); tick(); 
 // ---------- modals ----------
 
 function openModal(html) {
+  stopAnim();
   const m = $('#modal');
   m.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}<button class="btn ghost wide" data-act="close-modal">Close</button></div>`;
   m.hidden = false;
 }
-function closeModal() { const m = $('#modal'); m.hidden = true; m.innerHTML = ''; }
+let stopAnim = () => {};
+function closeModal() { stopAnim(); stopAnim = () => {}; const m = $('#modal'); m.hidden = true; m.innerHTML = ''; }
 
 function showSummary(id) {
   const s = S.sessions.find((x) => x.id === id);
@@ -653,10 +656,12 @@ const actions = {
   howto: (d) => {
     const ex = EX[d.id], tip = HOWTO[d.id];
     openModal(`<h2>${h(ex.name)}</h2>
+      ${ANIM[d.id] ? '<div class="anim-box" id="anim"></div>' : ''}
       ${tip ? `<ol class="howto">${tip.steps.map((x) => `<li>${h(x)}</li>`).join('')}</ol>` : '<p class="muted">No written cues for this exercise yet. The video search below will show you how.</p>'}
       ${tip?.shoulder && S.settings.rehabMode ? card(`<b>🩹 Shoulder tip:</b> ${h(tip.shoulder)}`, 'warn') : ''}
       <a class="btn wide video" href="${h(videoURL(ex.name))}" target="_blank" rel="noopener">▶ Watch videos on YouTube</a>
       <p class="muted small">Videos open YouTube and need internet. Start light while you learn a new movement.</p>`);
+    if (ANIM[d.id]) stopAnim = mountAnimation($('#anim'), d.id);
   },
   'close-modal': closeModal,
   't-minus': () => { if (S.timer) { S.timer.end -= 15000; persist(); tick(); } },
