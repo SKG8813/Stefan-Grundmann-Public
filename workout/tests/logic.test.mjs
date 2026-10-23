@@ -137,3 +137,11 @@ test('every built-in exercise has how-to cues', async () => {
   const { HOWTO } = await import('../js/howto.js');
   for (const e of EXERCISES) assert.ok(HOWTO[e.id]?.steps?.length >= 3, e.id);
 });
+
+test('every built-in exercise has an animation that renders', async () => {
+  const { ANIM, frameSVG } = await import('../js/anim.js');
+  for (const e of EXERCISES) {
+    assert.ok(ANIM[e.id], e.id);
+    for (const x of [0, 0.5, 1]) assert.doesNotMatch(frameSVG(ANIM[e.id], x), /NaN|undefined/, e.id);
+  }
+});
