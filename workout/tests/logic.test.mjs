@@ -145,3 +145,15 @@ test('every built-in exercise has an animation that renders', async () => {
     for (const x of [0, 0.5, 1]) assert.doesNotMatch(frameSVG(ANIM[e.id], x), /NaN|undefined/, e.id);
   }
 });
+
+test('animations move every changing value smoothly (no jumps)', async () => {
+  const { ANIM, frameSVG } = await import('../js/anim.js');
+  const defaults = ['sy', 'foot', 'headDrop'];
+  for (const [id, d] of Object.entries(ANIM)) {
+    for (const k of Object.keys(d.b)) {
+      if (typeof d.b[k] === 'number') assert.ok(k in d.a || defaults.includes(k), `${id}: "${k}" missing from start pose`);
+    }
+    assert.notEqual(frameSVG(d, 0), frameSVG(d, 1), `${id}: start and end look identical`);
+    assert.notEqual(frameSVG(d, 0.5), frameSVG(d, 1), `${id}: jumps straight to the end pose`);
+  }
+});

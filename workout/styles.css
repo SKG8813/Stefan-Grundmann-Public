@@ -191,8 +191,8 @@ a.btn.video { display: block; text-align: center; text-decoration: none; box-siz
 .anim .limb, .anim .torso { stroke: var(--text); stroke-width: 5; stroke-linecap: round; fill: none; }
 .anim .torso { stroke-width: 7; }
 .anim .far { opacity: .35; }
-.anim .head { fill: var(--text); }
-.anim .trunk { fill: var(--text); stroke: var(--text); stroke-width: 4; stroke-linejoin: round; }
+.anim .head, .anim .hand { fill: var(--text); }
+.anim .trunk { fill: var(--muted); stroke: var(--muted); stroke-width: 4; stroke-linejoin: round; }
 .anim .nose { stroke-width: 3; }
 .anim .plate { fill: var(--panel2); stroke: var(--accent); stroke-width: 4; }
 .anim .plate-f { fill: var(--accent); }
