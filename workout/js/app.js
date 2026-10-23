@@ -4,10 +4,12 @@ import { load, save, exerciseMap, exportJSON, importJSON, uid, DEFAULT_SETTINGS 
 import { lineChart } from './charts.js';
 import { HOWTO, videoURL } from './howto.js';
 import { ANIM, mountAnimation } from './anim.js';
+import { ic } from './icons.js';
 
 let S = load();
 let EX = exerciseMap(S);
-const ui = { tab: 'workout', editRoutine: null, progEx: null, metric: 'e1rm', histLimit: 20, claudeLoading: false, claudeError: '' };
+const ui = { tab: 'workout', editRoutine: null, progEx: null, metric: 'e1rm', histLimit: 20, claudeLoading: false, claudeError: '', progTab: 'coach', moreRoutines: false, warmOpen: null, bigTimer: false };
+const CHEST_TARGET = 18;
 
 const HOME_SPLIT = ['home-push-a', 'home-pull-a', 'home-push-b', 'home-pull-b'];
 const FALLBACK_MODELS = new Set(['claude-opus-5-5', 'claude-sonnet-5-5']);
@@ -20,6 +22,13 @@ const addDays = (iso, n) => L.todayISO(new Date(Date.parse(iso) + n * L.DAY + 12
 const fmtTime = (sec) => `${Math.floor(sec / 60)}:${String(Math.max(0, Math.round(sec % 60))).padStart(2, '0')}`;
 const card = (html, cls = '') => `<div class="card ${cls}">${html}</div>`;
 const groupBy = (arr, fn) => arr.reduce((m, x) => m.set(fn(x), [...(m.get(fn(x)) || []), x]), new Map());
+const splitTitle = (name) => { const k = (name || '').indexOf(': '); return k > 0 ? [name.slice(0, k), name.slice(k + 2)] : [name || 'Workout', '']; };
+const inlineIc = (name) => `<span style="display:inline-flex;vertical-align:-3px">${ic(name, 16)}</span>`;
+function applyTheme() {
+  const t = S.settings.theme;
+  if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  else delete document.documentElement.dataset.theme;
+}
 const deloadActive = () => !!S.settings.deloadUntil && today() <= S.settings.deloadUntil;
 
 function persist() {
@@ -39,9 +48,10 @@ function toast(msg, cls = '') {
 // ---------- render ----------
 
 function render() {
+  applyTheme();
   const views = { workout: viewWorkout, routines: viewRoutines, progress: viewProgress, body: viewBody, settings: viewSettings };
   $('#main').innerHTML = views[ui.tab]();
-  document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === ui.tab));
+  document.querySelectorAll('#nav button').forEach((b) => { const on = b.dataset.tab === ui.tab; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false'); });
   renderTimer();
   updateWakeLock();
 }
@@ -65,7 +75,13 @@ function lastDone(routineId) {
   const s = S.sessions.filter((x) => x.routineId === routineId).sort((a, b) => b.date.localeCompare(a.date))[0];
   if (!s) return '';
   const d = L.daysBetween(s.date, today());
-  return ` · last ${d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`}`;
+  return d === 0 ? 'today' : d === 1 ? 'yesterday' : d < 7 ? `${d} days ago` : d < 60 ? `${Math.round(d / 7)} wk ago` : 'a while ago';
+}
+
+const estimateMin = (r) => Math.max(10, Math.round(r.items.reduce((a, it) => a + (it.sets ?? 3) * ((it.rest ?? EX[it.exId]?.rest ?? 90) + 40), 0) / 300) * 5);
+
+function routineRow(r, right) {
+  return `<button class="routine" data-act="start" data-id="${h(r.id)}"><span>${h(r.name.replace(': ', ' · '))}</span><small>${h(right ?? lastDone(r.id))}${ic('chevron', 16)}</small></button>`;
 }
 
 function nextHomeDay() {
@@ -76,24 +92,50 @@ function nextHomeDay() {
 
 function viewWorkout() {
   if (S.active) return viewActive();
-  let html = '';
-  const st = L.deloadStatus(S.sessions, S.settings, today());
+  const t = today(), now = new Date();
+  let html = `<header class="top"><span class="wordmark">REP</span><span class="muted small">${h(now.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }))}</span></header>`;
+  const st = L.deloadStatus(S.sessions, S.settings, t);
   if (deloadActive()) {
     html += card(`<b>Deload week</b> until ${h(S.settings.deloadUntil)}. Suggestions use about 90% of your usual weight and one fewer set.<div class="row"><button class="btn small ghost" data-act="end-deload">End deload</button></div>`, 'info');
-  } else if (st.due && !(S.settings.deloadSnooze && S.settings.deloadSnooze >= today())) {
-    html += card(`<b>Time for a lighter week.</b> You've trained ${st.weeks} weeks straight. One deload week (lighter loads, fewer sets) lets joints and the shoulder catch up.<div class="row"><button class="btn" data-act="start-deload">Start deload week</button><button class="btn ghost" data-act="snooze-deload">Remind me next week</button></div>`, 'warn');
+  } else if (st.due && !(S.settings.deloadSnooze && S.settings.deloadSnooze >= t)) {
+    html += card(`<b>Time for a lighter week.</b> You've trained ${st.weeks} weeks straight. One deload week (lighter loads, fewer sets) lets joints and the shoulder catch up.<div class="row"><button class="btn small" data-act="start-deload">Start deload week</button><button class="btn small ghost" data-act="snooze-deload">Next week</button></div>`, 'warn');
   }
-  const next = nextHomeDay();
   if (S.upgradeNote) html += card(`${h(S.upgradeNote)}<div class="row"><button class="btn small ghost" data-act="dismiss-upgrade">Got it</button></div>`, 'info');
-  const gain = L.gainCheck(S.bodyweight, today());
+  const gain = L.gainCheck(S.bodyweight, t);
   if (gain && gain.status !== 'ok') html += card(gainMessage(gain), 'warn');
-  if (next) html += card(`<small class="muted">Up next in your home split</small><div class="up-next"><b>${h(next.name)}</b><button class="btn primary" data-act="start" data-id="${h(next.id)}">Start</button></div>`);
   if (!S.sessions.length) html += card('New here? Import your Caliber history in <a href="#" data-act="tab" data-tab="settings">Settings</a> so suggestions start from your real numbers.', 'info');
-  html += '<h2>All routines</h2>';
-  for (const [g, rs] of groupBy(S.routines, (r) => r.group || 'My routines')) {
-    html += `<h3>${h(g)}</h3><div class="list">${rs.map((r) => `<button class="routine" data-act="start" data-id="${h(r.id)}"><span>${h(r.name)}</span><small>${r.items.filter((i) => EX[i.exId]?.equip !== 'band').length} exercises${lastDone(r.id)}</small></button>`).join('')}</div>`;
+
+  const next = nextHomeDay();
+  if (next) {
+    const [a, b] = splitTitle(next.name);
+    const n = next.items.filter((i) => EX[i.exId]?.equip !== 'band').length;
+    html += `<section class="hero"><span class="label">Up next</span><span class="title">${h(a)}</span><span class="meta">${b ? `${h(b)} · ` : ''}${n} exercises · about ${estimateMin(next)} min</span><button class="btn big" data-act="start" data-id="${h(next.id)}">Start workout</button></section>`;
   }
-  html += '<button class="btn ghost wide" data-act="start-empty">Start an empty workout</button>';
+
+  const mon = addDays(t, -((now.getDay() + 6) % 7));
+  const trained = new Set(S.sessions.map((x) => x.date));
+  html += `<div class="week" aria-label="This week">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((l, k) => { const d = addDays(mon, k); return `<div class="${trained.has(d) ? 'on' : ''} ${d === t ? 'today' : ''}">${l}<i></i></div>`; }).join('')}</div>`;
+
+  const chest = Math.round(L.setsPerMuscle(S.sessions, EX, mon, t).chest || 0);
+  const lastBw = [...S.bodyweight].sort((x, y) => x.date.localeCompare(y.date)).pop();
+  const target = lastBw ? L.proteinTarget(lastBw.w, S.settings.proteinPerKg) : null;
+  const hit = !!S.protein[t];
+  html += `<div class="stats2">
+    <button data-act="tab" data-tab="progress"><span class="label">Chest sets</span><b>${chest}<span> / ${CHEST_TARGET}</span></b><div class="meter"><div style="width:${Math.min(100, (chest / CHEST_TARGET) * 100)}%"></div></div></button>
+    ${target
+      ? `<button data-act="protein-toggle" aria-pressed="${hit}"><span class="label">Protein${hit ? ' · done' : ''}</span><b>${target}<span> g${hit ? ' ✓' : ''}</span></b><div class="meter"><div style="width:${hit ? 100 : 0}%"></div></div></button>`
+      : '<button data-act="tab" data-tab="body"><span class="label">Protein</span><b><span>Log weight</span></b><div class="meter"><div style="width:0%"></div></div></button>'}
+  </div>`;
+
+  const split = HOME_SPLIT.map((id) => S.routines.find((r) => r.id === id)).filter(Boolean);
+  if (split.length) html += `<h3>Your split</h3><div class="list">${split.map((r) => routineRow(r, r.id === next?.id ? 'next' : null)).join('')}</div>`;
+  html += `<div class="row"><button class="btn small ghost" data-act="more-routines" aria-expanded="${ui.moreRoutines}">${ui.moreRoutines ? 'Hide other routines' : 'More routines'}</button></div>`;
+  if (ui.moreRoutines) {
+    for (const [g, rs] of groupBy(S.routines.filter((r) => !HOME_SPLIT.includes(r.id)), (r) => r.group || 'My routines')) {
+      html += `<h3>${h(g)}</h3><div class="list">${rs.map((r) => routineRow(r)).join('')}</div>`;
+    }
+    html += '<button class="btn ghost wide" data-act="start-empty">Start an empty workout</button>';
+  }
   return html;
 }
 
@@ -111,7 +153,6 @@ function makeEntry(it, deload, routineId) {
   const hist = L.exerciseHistory(S.sessions, it.exId);
   const ramp = rampSets(it, routineId);
   const sug = L.suggest(ex, { sets: ramp ?? it.sets ?? 3, repMin, repMax }, hist, S.settings, { deload, today: today() });
-  if (ramp) sug.message = `Build-up: ${ramp} sets this time; all ${it.sets} sets from your 3rd session of this day. ${sug.message}`;
   const last = hist[hist.length - 1];
   const lt = L.loadType(ex.equip);
   const sets = [];
@@ -122,8 +163,26 @@ function makeEntry(it, deload, routineId) {
     sets.push({ w, r, pw: w, done: false });
   }
   return { exId: it.exId, station: it.station || '', itemNote: it.note || '', repMin, repMax, rest: it.rest ?? ex.rest,
-    suggestion: { kind: sug.kind, message: sug.message }, sets };
+    ramp, fullSets: it.sets, suggestion: { kind: sug.kind, message: sug.message, head: sugHead(sug, lt) }, sets };
 }
+
+// One-line headline for a suggestion; the full reason shows on tap.
+function sugHead(s, lt) {
+  const W = lt === 'bodyweight' ? (s.weight ? `+${s.weight} lb` : 'bodyweight') : `${s.weight} lb`;
+  switch (s.kind) {
+    case 'up': return lt === 'bodyweight' ? `Add ${s.weight} lb on your back` : `${W} today`;
+    case 'tempo': return 'Add a set or slow the tempo';
+    case 'hold': return 'Beat last time';
+    case 'pain': return `${W} · shoulder flagged`;
+    case 'pain2': return `${W} · check with physio`;
+    case 'stall': return 'Stalled · try a lighter week';
+    case 'deload': return `Deload · ${W}`;
+    case 'return': return lt === 'bodyweight' || s.weight == null ? 'Ease back in' : `Restart at ${W}`;
+    case 'new': return 'First time · find your weight';
+    default: return '';
+  }
+}
+const SUG_IC = { up: 'up', tempo: 'up', pain: 'down', pain2: 'alert', stall: 'pause', deload: 'down', return: 'history', hold: 'progress', new: 'plus' };
 
 function startWorkout(routineId) {
   if (S.active) { ui.tab = 'workout'; render(); return; }
@@ -131,6 +190,7 @@ function startWorkout(routineId) {
   const deload = deloadActive();
   S.active = { id: uid(), date: today(), routineId: r?.id || null, title: r?.name || 'Workout', startedAt: Date.now(), deload, note: '',
     entries: (r?.items || []).filter((it) => EX[it.exId]).map((it) => makeEntry(it, deload, r.id)) };
+  ui.warmOpen = null;
   persist();
   ui.tab = 'workout';
   render();
@@ -139,21 +199,42 @@ function startWorkout(routineId) {
 
 const elapsed = () => (S.active ? fmtTime((Date.now() - S.active.startedAt) / 1000) : '');
 
+function warmIsOpen(bands) {
+  if (ui.warmOpen != null) return ui.warmOpen;
+  return !bands.every((x) => x.e.sets.every((s) => s.done));
+}
+
 function viewActive() {
   const a = S.active;
-  let html = `<div class="wk-head"><div><h2>${h(a.title)}</h2><small class="muted">${h(a.date)}${a.deload ? ' · deload' : ''} · <span id="elapsed">${elapsed()}</span></small></div><button class="btn primary" data-act="finish">Finish</button></div>`;
-  if (S.settings.rehabMode) html += '<p class="muted small">Tap 🤕 on any set that bothered your shoulder.</p>';
+  const [t1, t2] = splitTitle(a.title);
+  let html = `<div class="wk-head"><div><div class="label">${h(t1)}${a.deload ? ' · deload' : ''} · <span id="elapsed">${elapsed()}</span></div><div class="title">${h(t2 || t1)}</div></div><button class="btn" data-act="finish">Finish</button></div>`;
+  const bands = a.entries.map((e, i) => ({ e, i })).filter((x) => EX[x.e.exId]?.equip === 'band');
+  if (bands.length) {
+    const doneN = bands.filter((x) => x.e.sets.every((s) => s.done)).length;
+    const open = warmIsOpen(bands);
+    html += `<div class="warm"><button class="warm-head" data-act="warm-toggle" aria-expanded="${open}">Shoulder warm-up<span>${doneN}/${bands.length}${doneN === bands.length ? ic('check', 18) : ic(open ? 'chevronDown' : 'chevron', 18)}</span></button>`;
+    if (open) {
+      html += bands.map(({ e, i }) => {
+        const ex = EX[e.exId], done = e.sets.every((s) => s.done);
+        return `<div class="warm-item"><div class="grow">${h(ex.name)}<small>${e.sets.length} × ${e.repMin}–${e.repMax}</small></div>
+          <button class="btn ghost small" data-act="howto" data-id="${h(ex.id)}">How to</button>
+          <button class="tick ${done ? 'on' : ''}" data-act="band-done" data-i="${i}" aria-pressed="${done}" aria-label="${h(ex.name)} done">${ic('check')}</button></div>`;
+      }).join('');
+    }
+    html += '</div>';
+  }
+  if (S.settings.rehabMode) html += `<p class="muted small">Tap ${inlineIc('alert')} on a set that bothered your shoulder.</p>`;
   let prev = null;
   a.entries.forEach((e, i) => {
     const ex = EX[e.exId];
-    if (!ex) return;
-    if (e.station && e.station !== prev) html += `<div class="station">${prev ? 'Setup change: ' : 'Setup: '}<b>${h(e.station)}</b></div>`;
+    if (!ex || ex.equip === 'band') return;
+    if (e.station && e.station !== prev) html += `<div class="station label">${prev ? 'Setup change' : 'Setup'} · ${h(e.station)}</div>`;
     prev = e.station || prev;
     html += entryCard(e, i, ex);
   });
-  html += '<div class="row"><button class="btn ghost" data-act="add-ex">+ Add exercise</button></div>';
+  html += '<div class="row"><button class="btn ghost" data-act="add-ex">' + ic('plus', 18) + ' Add exercise</button></div>';
   html += `<label class="field">Workout note<textarea data-bind="active-note" rows="2" placeholder="How did it feel?">${h(a.note || '')}</textarea></label>`;
-  html += '<div class="row"><button class="btn danger ghost" data-act="discard">Discard workout</button></div>';
+  html += '<div class="row"><button class="btn danger" data-act="discard">Discard workout</button></div>';
   return html;
 }
 
@@ -162,40 +243,44 @@ function entryCard(e, i, ex) {
   const work = e.sets.filter((s) => !s.warmup);
   const complete = work.length && work.every((s) => s.done);
   const note = S.exNotes[e.exId];
+  const sg = e.suggestion || {};
+  const head = sg.head ?? (sg.message ? 'Tip' : '');
+  const painCol = S.settings.rehabMode;
   let html = `<section class="ex ${complete ? 'complete' : ''}">
-    <div class="ex-head"><h3>${h(ex.name)}${ex.shoulder && S.settings.rehabMode ? ' <span class="tag">shoulder</span>' : ''}</h3>
-    <small class="muted">${work.length} × ${e.repMin}–${e.repMax}${lt === 'band' ? '' : ` · rest ${fmtTime(e.rest)}`}</small></div>`;
-  if (e.itemNote) html += `<div class="muted small">${h(e.itemNote)}</div>`;
-  if (note) html += `<div class="exnote">📝 ${h(note)}</div>`;
-  if (e.suggestion?.message) html += `<div class="sug ${h(e.suggestion.kind)}">${h(e.suggestion.message)}</div>`;
-  html += '<div class="sets">' + e.sets.map((s, j) => setRow(e, i, s, j, lt)).join('') + '</div>';
-  html += `<div class="ex-actions">
-    <button class="btn small ghost" data-act="howto" data-id="${h(ex.id)}">How to</button>
-    <button class="btn small ghost" data-act="add-set" data-i="${i}">+ Set</button>
-    ${lt === 'load' && ex.kind === 'compound' ? `<button class="btn small ghost" data-act="warmup" data-i="${i}">Warm-up</button>` : ''}
-    ${lt === 'load' && ['barbell', 'landmine'].includes(ex.equip) ? `<button class="btn small ghost" data-act="plates" data-i="${i}">Plates</button>` : ''}
-    <button class="btn small ghost" data-act="swap" data-i="${i}">Swap</button>
-    <button class="btn small ghost" data-act="note" data-i="${i}">Note</button>
-    <button class="btn small ghost" data-act="ex-hist" data-i="${i}">History</button>
-    <button class="btn small ghost danger" data-act="remove-ex" data-i="${i}" aria-label="Remove exercise">✕</button>
-  </div></section>`;
+    <div class="ex-head"><div class="grow"><h3>${h(ex.name)}${ex.shoulder && S.settings.rehabMode ? ' <span class="tag">shoulder</span>' : ''}</h3>
+      <div class="sub">${work.length} × ${e.repMin}–${e.repMax} · rest ${fmtTime(e.rest)}</div></div>
+      <div class="ex-tools"><button class="btn ghost small" data-act="howto" data-id="${h(ex.id)}">How to</button>
+      <button class="icon-btn" data-act="ex-menu" data-i="${i}" aria-label="More options for ${h(ex.name)}">${ic('more')}</button></div></div>`;
+  if (e.itemNote) html += `<div class="item-note">${h(e.itemNote)}</div>`;
+  if (note) html += `<div class="exnote">${ic('note', 16)}<span>${h(note)}</span></div>`;
+  if (head || e.ramp) {
+    html += '<div class="chips">';
+    if (head) html += `<button class="sug ${h(sg.kind)}" data-act="sug-toggle" data-i="${i}" aria-expanded="${!!e.showWhy}">${ic(SUG_IC[sg.kind] || 'progress', 14)}${h(head)}</button>`;
+    if (e.ramp) html += `<span class="sug" style="cursor:default">Build-up · ${e.ramp} of ${e.fullSets} sets</span>`;
+    html += '</div>';
+    if (e.showWhy && sg.message) html += `<p class="why">${h(sg.message)}${e.ramp ? ` Build-up: ${e.ramp} sets for your first 2 sessions of this day, then all ${e.fullSets}.` : ''}</p>`;
+  }
+  html += `<div class="sets ${painCol ? '' : 'no-pain'}"><span class="hd">SET</span><span class="hd">${lt === 'bodyweight' ? '+LB' : 'LB'}</span><span class="hd">REPS</span><span></span>${painCol ? '<span></span>' : ''}`;
+  html += e.sets.map((s, j) => setRow(e, i, s, j, lt, painCol)).join('') + '</div></section>';
   return html;
 }
 
-function setRow(e, i, s, j, lt) {
+function setRow(e, i, s, j, lt, painCol) {
   const n = s.warmup ? 'W' : e.sets.slice(0, j + 1).filter((x) => !x.warmup).length;
+  const cls = `num ${s.done ? 'done' : ''} ${s.warmup ? 'warm-set' : ''}`;
   const w = lt === 'band'
     ? '<span class="num band">band</span>'
-    : `<input class="num" type="number" inputmode="decimal" step="any" data-set="${i}.${j}.w" value="${s.w ?? ''}" placeholder="${lt === 'bodyweight' ? '+lb' : 'lb'}" aria-label="Weight">`;
-  const r = `<input class="num" type="number" inputmode="numeric" data-set="${i}.${j}.r" value="${s.r ?? ''}" placeholder="reps" aria-label="Reps">`;
-  const pain = s.warmup || lt === 'band' || !S.settings.rehabMode
-    ? '<span class="pain-sp"></span>'
-    : `<button class="pain-btn ${s.pain ? 'on' : ''}" data-act="pain" data-i="${i}" data-j="${j}" aria-label="Shoulder hurt" title="Shoulder hurt">🤕</button>`;
-  let html = `<div class="set ${s.done ? 'done' : ''} ${s.warmup ? 'warm' : ''} ${s.pain ? 'pain' : ''}">
-    <span class="sn">${n}</span>${w}<span class="x">×</span>${r}
-    <button class="done-btn" data-act="done" data-i="${i}" data-j="${j}" aria-label="Mark set done">✓</button>${pain}</div>`;
+    : `<input class="${cls}" type="number" inputmode="decimal" step="any" data-set="${i}.${j}.w" value="${s.w ?? ''}" placeholder="${lt === 'bodyweight' ? '0' : 'lb'}" aria-label="Set ${n} weight">`;
+  const r = `<input class="${cls}" type="number" inputmode="numeric" data-set="${i}.${j}.r" value="${s.r ?? ''}" placeholder="reps" aria-label="Set ${n} reps">`;
+  const done = `<button class="done-btn ${s.done ? 'on' : ''}" data-act="done" data-i="${i}" data-j="${j}" aria-pressed="${!!s.done}" aria-label="Set ${n} done">${ic('check')}</button>`;
+  const pain = !painCol ? '' : s.warmup
+    ? '<span></span>'
+    : `<button class="pain-btn ${s.pain ? 'on' : ''}" data-act="pain" data-i="${i}" data-j="${j}" aria-pressed="${!!s.pain}" aria-label="Shoulder hurt on set ${n}">${ic('alert')}</button>`;
+  let html = `<span class="sn">${n}</span>${w}${r}${done}${pain}`;
   if (s.done && !s.warmup && lt !== 'band' && S.settings.askRir) {
-    html += `<div class="rir"><span class="muted small">Reps left in tank</span>${[0, 1, 2, 3, 4].map((v) => `<button class="chip ${s.rir === v ? 'on' : ''}" data-act="rir" data-i="${i}" data-j="${j}" data-v="${v}">${v === 4 ? '4+' : v}</button>`).join('')}</div>`;
+    html += s.rir == null
+      ? `<div class="rir"><span class="small">Reps left?</span>${[0, 1, 2, 3, 4].map((v) => `<button class="chip" data-act="rir" data-i="${i}" data-j="${j}" data-v="${v}">${v === 4 ? '4+' : v}</button>`).join('')}</div>`
+      : `<button class="rir-tag" data-act="rir-clear" data-i="${i}" data-j="${j}">${s.rir === 4 ? '4+' : s.rir} left in tank · change</button>`;
   }
   return html;
 }
@@ -259,11 +344,11 @@ function renderTimer() {
   const el = $('#timer');
   const t = S.timer;
   document.body.classList.toggle('has-timer', !!t);
-  if (!t) { el.hidden = true; el.innerHTML = ''; return; }
+  if (!t) { el.hidden = true; el.className = ''; el.innerHTML = ''; ui.bigTimer = false; return; }
   el.hidden = false;
-  el.innerHTML = `<div class="tbar" id="tbar"></div><div class="tl"><small>${t.fired ? 'Rest done: go!' : `Rest · ${h(t.label)}`}</small><b id="tleft"></b></div>
-    <button class="btn small ghost" data-act="t-minus">−15</button><button class="btn small ghost" data-act="t-plus">+15</button>
-    <button class="btn small" data-act="t-skip">${t.fired ? 'OK' : 'Skip'}</button>`;
+  el.className = `${ui.bigTimer ? 'big' : ''} ${t.fired ? 'fired' : ''}`;
+  el.innerHTML = `<button class="tl" data-act="timer-big" aria-label="${ui.bigTimer ? 'Shrink' : 'Enlarge'} rest timer"><small>${t.fired ? 'Rest done · go' : `Rest · ${h(t.label)}`}</small><b id="tleft"></b></button>
+    <div class="tbtns"><button class="tbtn" data-act="t-minus">−15</button><button class="tbtn" data-act="t-plus">+15</button><button class="tbtn solid" data-act="t-skip">${t.fired ? 'OK' : 'Skip'}</button></div><div class="tbar" id="tbar"></div>`;
   tick();
 }
 
@@ -331,12 +416,12 @@ function showSummary(id) {
       <div><b>${sum.sets}</b><small>working sets</small></div>
       <div><b>${Math.round(sum.volume).toLocaleString()}</b><small>lb volume${delta != null ? ` (${delta >= 0 ? '+' : ''}${delta}% vs last)` : ''}</small></div>
     </div>`;
-  if (sum.prs.length) html += card(`<b>🏆 New personal records</b><ul>${sum.prs.map((p) => `<li>${h(p)}</li>`).join('')}</ul>`, 'good');
-  if (sum.pains.length) html += card(`<b>🤕 Shoulder flagged:</b> ${h(sum.pains.join(', '))}. Next time these drop ~${S.settings.painDropPct}% and progression pauses.`, 'warn');
+  if (sum.prs.length) html += card(`<h4>${ic('trophy', 18)} New personal records</h4><ul>${sum.prs.map((p) => `<li>${h(p)}</li>`).join('')}</ul>`, 'good');
+  if (sum.pains.length) html += card(`<h4>${ic('alert', 18)} Shoulder flagged</h4> ${h(sum.pains.join(', '))}. Next time these drop ~${S.settings.painDropPct}% and progression pauses.`, 'warn');
   if (s.note) html += `<p><i>${h(s.note)}</i></p>`;
   html += s.entries.map((e) => {
     const ex = EX[e.exId];
-    const sets = e.sets.filter((x) => !x.warmup).map((x) => `${ex && L.loadType(ex.equip) === 'band' ? '' : `${x.w}×`}${x.r}${x.rir != null ? ` @${x.rir}` : ''}${x.pain ? ' 🤕' : ''}`).join(', ');
+    const sets = e.sets.filter((x) => !x.warmup).map((x) => `${ex && L.loadType(ex.equip) === 'band' ? '' : `${x.w}×`}${x.r}${x.rir != null ? ` @${x.rir}` : ''}${x.pain ? ' (shoulder)' : ''}`).join(', ');
     return `<div class="hist-row"><b>${h(ex?.name || e.exId)}</b><span>${h(sets)}</span></div>`;
   }).join('');
   html += `<div class="row"><button class="btn danger ghost small" data-act="delete-session" data-id="${h(s.id)}">Delete this workout</button></div>`;
@@ -355,7 +440,7 @@ function platesHTML(target) {
 
 function viewRoutines() {
   if (ui.editRoutine) return viewRoutineEditor();
-  let html = '<div class="row"><h2 class="grow">Routines</h2><button class="btn" data-act="new-routine">+ New</button></div>';
+  let html = `<div class="row"><h2 class="grow">Plans</h2><button class="btn small" data-act="new-routine">${ic('plus', 16)} New</button></div>`;
   for (const [g, rs] of groupBy(S.routines, (r) => r.group || 'My routines')) {
     html += `<h3>${h(g)}</h3>` + rs.map((r) => `<div class="card r-card"><div class="grow"><b>${h(r.name)}</b><small class="muted">${h(r.items.filter((i) => EX[i.exId]?.equip !== 'band').map((i) => EX[i.exId]?.name || i.exId).join(' · '))}</small></div>
       <div class="col"><button class="btn small primary" data-act="start" data-id="${h(r.id)}">Start</button><button class="btn small ghost" data-act="edit-routine" data-id="${h(r.id)}">Edit</button><button class="btn small ghost" data-act="dup-routine" data-id="${h(r.id)}">Copy</button></div></div>`).join('');
@@ -426,9 +511,9 @@ function coachCard() {
     if (k) groups[k].push(`<li><b>${h(ex.name)}</b>: ${h(sug.message)}</li>`);
   }
   let html = '';
-  if (groups.up.length) html += `<h4>⬆ Ready to progress</h4><ul>${groups.up.join('')}</ul>`;
-  if (groups.pain.length) html += `<h4>🤕 Shoulder watch</h4><ul>${groups.pain.join('')}</ul>`;
-  if (groups.stall.length) html += `<h4>⏸ Stalled</h4><ul>${groups.stall.join('')}</ul>`;
+  if (groups.up.length) html += `<h4>${ic('up', 16)} Ready to progress</h4><ul>${groups.up.join('')}</ul>`;
+  if (groups.pain.length) html += `<h4>${ic('alert', 16)} Shoulder watch</h4><ul>${groups.pain.join('')}</ul>`;
+  if (groups.stall.length) html += `<h4>${ic('pause', 16)} Stalled</h4><ul>${groups.stall.join('')}</ul>`;
   if (groups.stall.length >= 3) html += '<p><b>Several lifts have stalled.</b> That usually means you need a deload week more than more effort.</p>';
   return card(html || 'Nothing to change. Keep beating last time\'s reps.');
 }
@@ -471,8 +556,8 @@ function exerciseProgress() {
   const inj = S.settings.injuryDate;
   const cmp = lt !== 'bodyweight' ? L.injuryComparison(hist, inj) : null;
   const series = [
-    { label: metrics.find(([k]) => k === ui.metric)[1], points: hist.map((x) => ({ x: x.date, y: val(x) })) },
-    { label: 'Shoulder flagged', cls: 'pain', noLine: true, points: hist.filter((x) => x.pain).map((x) => ({ x: x.date, y: val(x) })) },
+    { label: metrics.find(([k]) => k === ui.metric)[1], points: hist.map((x) => ({ x: x.date, y: val(x) })).filter((p) => p.y > 0) },
+    { label: 'Shoulder flagged', cls: 'pain', noLine: true, points: hist.filter((x) => x.pain).map((x) => ({ x: x.date, y: val(x) })).filter((p) => p.y > 0) },
   ];
   if (!series[1].points.length) series.pop();
   let html = `<select data-act-change="prog-ex">${ids.map((id) => `<option value="${h(id)}" ${id === ui.progEx ? 'selected' : ''}>${h(EX[id].name)} (${counts[id]})</option>`).join('')}</select>
@@ -482,20 +567,23 @@ function exerciseProgress() {
     refs: cmp && ui.metric === 'e1rm' ? [{ y: cmp.pre, label: 'pre-injury best' }] : [],
   });
   if (cmp) html += `<p>Pre-injury best est. 1RM <b>${cmp.pre} lb</b>${cmp.now != null ? ` · since injury <b>${cmp.now} lb</b> (${cmp.pct}%)` : ' · not trained since the injury yet'}</p>`;
-  html += hist.slice(-5).reverse().map((x) => `<div class="hist-row"><span>${h(x.date)}</span><span>${h(x.sets.map((s) => `${lt === 'bodyweight' ? (s.w ? `+${s.w}×` : '') : `${s.w}×`}${s.r}${s.pain ? '🤕' : ''}`).join(', '))}</span></div>`).join('');
+  html += hist.slice(-5).reverse().map((x) => `<div class="hist-row"><span>${h(x.date)}</span><span>${h(x.sets.map((s) => `${lt === 'bodyweight' ? (s.w ? `+${s.w}×` : '') : `${s.w}×`}${s.r}${s.pain ? ' (shoulder)' : ''}`).join(', '))}</span></div>`).join('');
   return card(html);
 }
 
 function historyList() {
   const all = [...S.sessions].sort((a, b) => b.date.localeCompare(a.date) || (b.endedAt || 0) - (a.endedAt || 0));
   if (!all.length) return '<p class="muted">No workouts yet.</p>';
-  let html = '<div class="list">' + all.slice(0, ui.histLimit).map((s) => `<button class="routine" data-act="session" data-id="${h(s.id)}"><span>${h(s.title || 'Workout')}</span><small>${h(s.date)} · ${s.entries.reduce((a, e) => a + L.workingSets(e).length, 0)} sets${s.entries.some((e) => e.sets.some((x) => x.pain)) ? ' · 🤕' : ''}</small></button>`).join('') + '</div>';
+  let html = '<div class="list">' + all.slice(0, ui.histLimit).map((s) => `<button class="routine" data-act="session" data-id="${h(s.id)}"><span>${h(s.title || 'Workout')}</span><small>${h(s.date)} · ${s.entries.reduce((a, e) => a + L.workingSets(e).length, 0)} sets${s.entries.some((e) => e.sets.some((x) => x.pain)) ? ' · shoulder' : ''}</small></button>`).join('') + '</div>';
   if (all.length > ui.histLimit) html += '<button class="btn ghost wide" data-act="more-hist">Show more</button>';
   return html;
 }
 
 function viewProgress() {
-  return `<h2>Coach</h2>${coachCard()}${claudeCard()}<h2>Weekly sets per muscle</h2>${volumeCard()}<h2>Exercise progress</h2>${exerciseProgress()}<h2>History</h2>${historyList()}`;
+  const tabs = [['coach', 'Coach'], ['lifts', 'Lifts'], ['volume', 'Volume'], ['history', 'History']];
+  const t = ui.progTab || 'coach';
+  const body = t === 'coach' ? coachCard() + claudeCard() : t === 'lifts' ? exerciseProgress() : t === 'volume' ? volumeCard() : historyList();
+  return `<h2>Progress</h2><div class="seg" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${k === t}" class="${k === t ? 'on' : ''}" data-act="prog-tab" data-v="${k}">${l}</button>`).join('')}</div>${body}`;
 }
 
 // ---------- body tab ----------
@@ -550,37 +638,39 @@ function viewSettings() {
   const st = S.settings;
   const num = (k, label, extra = '') => `<label class="field">${label}<input type="number" inputmode="decimal" step="any" data-setting="${k}" value="${h(st[k])}" ${extra}></label>`;
   const chk = (k, label) => `<label class="field check"><input type="checkbox" data-setting="${k}" ${st[k] ? 'checked' : ''}> ${label}</label>`;
+  const grp = (title, inner, open = false) => `<details class="group" ${open ? 'open' : ''}><summary>${title}${ic('chevronDown', 18)}</summary><div>${inner}</div></details>`;
   return `<h2>Settings</h2>
-  ${card(`<b>Equipment</b><div class="grid2">${num('barWeight', 'Bar weight (lb)')}${num('increment', 'Barbell jump (lb)')}</div>
+  ${grp('Appearance', `<label class="field">Theme<select data-setting="theme">${[['auto', 'Match my phone'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => `<option value="${v}" ${st.theme === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`, true)}
+  ${grp('Equipment', `<div class="grid2">${num('barWeight', 'Bar weight (lb)')}${num('increment', 'Barbell jump (lb)')}</div>
     <label class="field">Plates you own (lb, comma separated)<input data-setting="plates" data-list value="${h(st.plates.join(', '))}"></label>
     <label class="field">Dumbbells you own (lb)<input data-setting="dumbbells" data-list value="${h(st.dumbbells.join(', '))}"></label>`)}
-  ${card(`<b>Shoulder rehab</b>
-    ${chk('rehabMode', 'Rehab mode: 🤕 button, slower progression on shoulder-loading lifts (3 clean sessions before adding weight)')}
-    <div class="grid2"><label class="field">Injury date<input type="date" data-setting="injuryDate" value="${h(st.injuryDate)}"></label>${num('painDropPct', 'Drop after 🤕 (%)')}</div>
+  ${grp('Shoulder rehab', `
+    ${chk('rehabMode', 'Rehab mode: shoulder flag on each set, slower progression on shoulder-loading lifts (3 clean sessions before adding weight)')}
+    <div class="grid2"><label class="field">Injury date<input type="date" data-setting="injuryDate" value="${h(st.injuryDate)}"></label>${num('painDropPct', 'Drop after a flag (%)')}</div>
     <p class="small">After a break of 4+ weeks, restart at this % of your last weight:</p>
     <div class="grid2">${num('restartPctShoulder', 'Shoulder lifts (%)')}${num('restartPctLegs', 'Leg lifts (%)')}${num('restartPctOther', 'Other lifts (%)')}</div>
     <label class="field">Rehab note (stays on this phone; included in Claude reviews)<textarea data-setting="rehabNote" rows="2" placeholder="e.g. physio guidance, movements to avoid">${h(st.rehabNote)}</textarea></label>
     <p class="muted small">General guidance, not medical advice. If pain is sharp, lingers, or keeps coming back, stop that lift and check with your physio.</p>`)}
-  ${card(`<b>Training</b><div class="grid2">${num('deloadWeeks', 'Deload every (weeks)')}</div>
+  ${grp('Training', `<div class="grid2">${num('deloadWeeks', 'Deload every (weeks)')}</div>
     ${chk('askRir', 'Ask "reps left in tank" after each set')}${chk('sound', 'Beep when rest is over')}
     <button class="btn small ghost" data-act="test-sound">Test beep</button>`)}
-  ${card(`<b>How rest times are chosen</b>
+  ${grp('How rest times are chosen', `
     <p class="small">Defaults are for muscle growth in a trained 38-year-old. Research shows no reason to change rest for age alone in a healthy adult:</p>
     <ul class="small"><li>Big compound lifts (squat, bench, rows, pull-ups): <b>2–3 min</b>, deadlifts 3 min. Longer rests let you keep more reps across sets, which drives growth (Schoenfeld et al. 2016; Grgic et al. 2017; ACSM 2009).</li>
     <li>Isolation lifts: <b>60–90 s</b>.</li><li>Band shoulder work: <b>30 s</b>.</li>
     <li>+30 s if you missed your reps, hit 0 reps in the tank, or flagged the shoulder.</li></ul>
     <p class="muted small">Change any rest time per exercise in the routine editor.</p>`)}
-  ${card(`<b>Claude review (optional)</b>
+  ${grp('Claude review (optional)', `
     <label class="field">Anthropic API key<input type="password" autocomplete="off" data-setting="apiKey" value="${h(st.apiKey)}" placeholder="sk-ant-…"></label>
     <label class="field">Model<select data-setting="model">${MODELS.map(([v, l]) => `<option value="${v}" ${st.model === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <p class="muted small">The key is stored only in this browser and is never in backups or the code. Use a dedicated key with a low monthly spend limit, and revoke it if this phone is lost.</p>`)}
-  ${card(`<b>Your data</b><p class="small">Everything stays on this phone. Back up regularly: clearing Safari data deletes it.</p>
+  ${grp('Your data', `<p class="small">Everything stays on this phone. Back up regularly: clearing Safari data deletes it.</p>
     <label class="field">Import Caliber strength CSV<input type="file" accept=".csv,text/csv" data-import="caliber-strength"></label>
     <label class="field">Import Caliber cardio CSV<input type="file" accept=".csv,text/csv" data-import="caliber-cardio"></label>
     <div class="row"><button class="btn" data-act="export">Export backup</button><label class="btn ghost file-btn">Restore backup<input type="file" accept=".json,application/json" data-import="backup" hidden></label></div>
     <p class="muted small">${S.sessions.length} workouts · ${S.bodyweight.length} weigh-ins · ${S.cardio.length} cardio entries</p>
-    <button class="btn danger ghost small" data-act="reset">Erase all data</button>`)}
-  ${card(`<b>Install on iPhone</b><ol class="small"><li>Open this page in Safari.</li><li>Tap Share → <b>Add to Home Screen</b>.</li><li>Open it from the home-screen icon. It works offline.</li></ol>`)}`;
+    <button class="btn danger small" data-act="reset">Erase all data</button>`)}
+  ${grp('Install on iPhone', `<ol class="small"><li>Open this page in Safari.</li><li>Tap Share → <b>Add to Home Screen</b>.</li><li>Open it from the home-screen icon. It works offline.</li></ol>`)}`;
 }
 
 // ---------- actions ----------
@@ -676,7 +766,7 @@ const actions = {
   'ex-hist': (d) => {
     const id = S.active.entries[d.i].exId, ex = EX[id];
     const hist = L.exerciseHistory(S.sessions, id).slice(-6).reverse();
-    openModal(`<h2>${h(ex.name)}</h2>${hist.map((x) => `<div class="hist-row"><span>${h(x.date)}</span><span>${h(x.sets.map((s) => `${s.w}×${s.r}${s.pain ? '🤕' : ''}`).join(', '))}</span></div>`).join('') || '<p class="muted">No history yet.</p>'}`);
+    openModal(`<h2>${h(ex.name)}</h2>${hist.map((x) => `<div class="hist-row"><span>${h(x.date)}</span><span>${h(x.sets.map((s) => `${s.w}×${s.r}${s.pain ? ' (shoulder)' : ''}`).join(', '))}</span></div>`).join('') || '<p class="muted">No history yet.</p>'}`);
   },
   'remove-ex': (d) => {
     if (!confirm('Remove this exercise from today\'s workout?')) return;
@@ -692,17 +782,45 @@ const actions = {
     openModal(`<h2>${h(ex.name)}</h2>
       ${ANIM[d.id] ? '<div class="anim-box" id="anim"></div>' : ''}
       ${tip ? `<ol class="howto">${tip.steps.map((x) => `<li>${h(x)}</li>`).join('')}</ol>` : '<p class="muted">No written cues for this exercise yet. The video search below will show you how.</p>'}
-      ${tip?.shoulder && S.settings.rehabMode ? card(`<b>🩹 Shoulder tip:</b> ${h(tip.shoulder)}`, 'warn') : ''}
-      <a class="btn wide video" href="${h(videoURL(ex.name))}" target="_blank" rel="noopener">▶ Watch videos on YouTube</a>
+      ${tip?.shoulder && S.settings.rehabMode ? card(`<h4>${ic('alert', 16)} Shoulder tip</h4>${h(tip.shoulder)}`, 'warn') : ''}
+      <a class="btn wide video" href="${h(videoURL(ex.name))}" target="_blank" rel="noopener">${ic('play', 16)} Watch videos on YouTube</a>
       <p class="muted small">Videos open YouTube and need internet. Start light while you learn a new movement.</p>`);
     if (ANIM[d.id]) stopAnim = mountAnimation($('#anim'), d.id);
   },
   'dismiss-upgrade': () => { delete S.upgradeNote; persist(); render(); },
   'protein-toggle': () => { const t = today(); if (S.protein[t]) delete S.protein[t]; else S.protein[t] = true; persist(); render(); },
   'close-modal': closeModal,
+  'more-routines': () => { ui.moreRoutines = !ui.moreRoutines; render(); },
+  'prog-tab': (d) => { ui.progTab = d.v; render(); },
+  'warm-toggle': () => {
+    const bands = S.active.entries.map((e, i) => ({ e, i })).filter((x) => EX[x.e.exId]?.equip === 'band');
+    ui.warmOpen = !warmIsOpen(bands); render();
+  },
+  'band-done': (d) => {
+    const e = S.active.entries[d.i];
+    const all = e.sets.every((s) => s.done);
+    for (const s of e.sets) { s.done = !all; if (!all) { s.r = s.r ?? e.repMax; s.w = 0; } }
+    persist(); render();
+  },
+  'sug-toggle': (d) => { const e = S.active.entries[d.i]; e.showWhy = !e.showWhy; persist(); render(); },
+  'rir-clear': (d) => { S.active.entries[d.i].sets[d.j].rir = null; persist(); render(); },
+  'timer-big': () => { ui.bigTimer = !ui.bigTimer; renderTimer(); },
+  'ex-menu': (d) => {
+    const e = S.active.entries[d.i], ex = EX[e.exId], lt = L.loadType(ex.equip);
+    const item = (act, icon, label, cls = '') => `<button class="${cls}" data-act="${act}" data-i="${d.i}">${ic(icon)}${label}</button>`;
+    openModal(`<h2>${h(ex.name)}</h2><div class="menu">
+      ${item('add-set', 'plus', 'Add a set')}
+      ${lt === 'load' && ex.kind === 'compound' ? item('warmup', 'flame', 'Add warm-up sets') : ''}
+      ${lt === 'load' && ['barbell', 'landmine'].includes(ex.equip) ? item('plates', 'plates', 'Plate calculator') : ''}
+      ${item('swap', 'swap', 'Swap exercise')}
+      ${item('note', 'note', S.exNotes[e.exId] ? 'Edit note' : 'Add a note')}
+      ${item('ex-hist', 'history', 'History')}
+      ${item('remove-ex', 'x', 'Remove from today', 'danger')}
+    </div>`);
+  },
   't-minus': () => { if (S.timer) { S.timer.end -= 15000; persist(); tick(); } },
   't-plus': () => { if (S.timer) { S.timer.end += 15000; S.timer.total += 15; S.timer.fired = false; persist(); renderTimer(); } },
-  't-skip': () => { S.timer = null; persist(); renderTimer(); },
+  't-skip': () => { S.timer = null; ui.bigTimer = false; persist(); renderTimer(); },
   'start-deload': () => { S.settings.deloadUntil = addDays(today(), 6); S.settings.lastDeload = today(); persist(); render(); },
   'end-deload': () => { S.settings.deloadUntil = ''; persist(); render(); },
   'snooze-deload': () => { S.settings.deloadSnooze = addDays(today(), 7); persist(); render(); },
@@ -769,7 +887,7 @@ const actions = {
     const blob = new Blob([exportJSON(S)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `liftlog-backup-${today()}.json`;
+    a.download = `rep-backup-${today()}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   },
@@ -856,6 +974,7 @@ document.addEventListener('click', (ev) => {
   const b = ev.target.closest('[data-act]');
   if (!b || !actions[b.dataset.act] || b.tagName === 'SELECT') return;
   ev.preventDefault();
+  if (b.closest('.menu')) closeModal();
   const d = { ...b.dataset };
   if (d.i != null) d.i = +d.i;
   if (d.j != null) d.j = +d.j;
@@ -884,7 +1003,7 @@ document.addEventListener('change', (ev) => {
     else if (t.type === 'number') v = parseFloat(t.value) || DEFAULT_SETTINGS[k];
     S.settings[k] = typeof v === 'string' ? v.trim() : v;
     persist();
-    if (t.type === 'checkbox' || t.dataset.list != null) render();
+    if (t.type === 'checkbox' || t.dataset.list != null || k === 'theme') render();
   } else if (t.dataset.r) {
     S.routines.find((x) => x.id === ui.editRoutine)[t.dataset.r] = t.value.trim();
     persist();
@@ -906,6 +1025,7 @@ document.addEventListener('change', (ev) => {
   }
 });
 
+document.querySelectorAll('#nav .nav-ic').forEach((el) => { el.innerHTML = ic(el.dataset.ic, 24); });
 document.querySelectorAll('#nav button').forEach((b) => b.addEventListener('click', () => actions.tab({ tab: b.dataset.tab })));
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

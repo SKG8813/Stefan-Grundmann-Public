@@ -1,6 +1,6 @@
-# Lift Log
+# REP
 
-An offline iPhone web app for tracking lifts, with progression nudges, a shoulder-rehab mode and a research-based rest timer. It has no server and no account. Your data stays in the browser on your phone.
+REP is an offline iPhone web app for tracking lifts, with progression nudges, a shoulder-rehab mode and a research-based rest timer. It has no server and no account. Your data stays in the browser on your phone.
 
 ## Features
 

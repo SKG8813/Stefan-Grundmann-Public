@@ -24,6 +24,7 @@ export const DEFAULT_SETTINGS = {
   askRir: true,
   apiKey: '',
   model: 'claude-opus-5-5',
+  theme: 'auto',
   proteinPerKg: 1.6,
   programStart: '',
 };
@@ -92,7 +93,7 @@ export function exportJSON(state) {
 
 export function importJSON(state, text) {
   const data = JSON.parse(text);
-  if (!data || !Array.isArray(data.sessions) || !Array.isArray(data.routines)) throw new Error('Not a Lift Log backup file');
+  if (!data || !Array.isArray(data.sessions) || !Array.isArray(data.routines)) throw new Error('Not a REP backup file');
   return { ...fresh(), ...data, settings: { ...DEFAULT_SETTINGS, ...data.settings, apiKey: state.settings.apiKey } };
 }
 
