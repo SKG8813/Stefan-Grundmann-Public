@@ -7,6 +7,7 @@ export const MUSCLES = ['chest', 'back', 'shoulders', 'rear delts', 'traps', 'bi
 const ex = (id, name, equip, kind, primary, secondary, opts = {}) => ({
   id, name, equip, kind, primary, secondary,
   shoulder: !!opts.shoulder,
+  addLoad: opts.addLoad,
   repMin: opts.repMin ?? (kind === 'compound' ? 6 : kind === 'band' ? 15 : 10),
   repMax: opts.repMax ?? (kind === 'compound' ? 10 : kind === 'band' ? 20 : 15),
   rest: opts.rest ?? (kind === 'compound' ? 150 : kind === 'band' ? 30 : 75),
@@ -53,6 +54,7 @@ export const EXERCISES = [
   // Bodyweight / rack attachments
   ex('pull-up', 'Pull-Up', 'bodyweight', 'compound', ['back'], ['biceps'], { repMin: 6, repMax: 12 }),
   ex('chin-up', 'Chin-Up', 'bodyweight', 'compound', ['back'], ['biceps'], { repMin: 6, repMax: 12 }),
+  ex('deficit-push-up', 'Deficit Push-Up (Hands on Plates)', 'bodyweight', 'compound', ['chest'], ['triceps', 'shoulders'], { shoulder: true, repMin: 8, repMax: 15, rest: 120, addLoad: 10 }),
   ex('tricep-dip', 'Tricep Dip', 'bodyweight', 'compound', ['triceps'], ['chest', 'shoulders'], { shoulder: true, repMin: 6, repMax: 12, rest: 120 }),
   ex('hanging-straight-leg-hip-raise', 'Hanging Straight Leg-Hip Raise', 'bodyweight', 'isolation', ['core'], [], { repMin: 10, repMax: 15, rest: 60 }),
 
@@ -77,6 +79,7 @@ const S = {
   landmine: 'Bar into landmine',
   dips: 'Dip bars on',
   db: 'Dumbbells & bench',
+  pushup: 'Floor: two plates for your hands',
   invrow: 'Rack: hip height (inverted row)',
   gym: 'Gym',
 };
@@ -90,37 +93,37 @@ const BANDS = [
 ];
 
 export const ROUTINES = [
-  // New 4-day home Push/Pull split, hypertrophy focus, light legs
+  // 4-day home Push/Pull split, chest priority: ~18 direct chest sets/week over 2 days,
+  // flat + incline pressing, push days all upper body. `ramp` = sets for the first 2 sessions.
   { id: 'home-push-a', group: 'Home split', name: 'Push A: Chest', items: [
     ...BANDS,
-    item('barbell-squat', 3, S.squat, { note: 'Only leg move today. Do it first, then lower the hooks once.' }),
-    item('barbell-bench-press', 3, S.bench),
+    item('barbell-bench-press', 4, S.bench, { ramp: 3, note: 'Chest first while you\'re fresh.' }),
+    item('barbell-incline-bench-press', 3, S.incline, { ramp: 2, note: 'Same hooks; set the bench to about 30°.' }),
     item('barbell-shrug', 3, S.bench, { note: 'Same hook height as bench.' }),
     item('barbell-lying-tricep-extension', 3, S.bench),
-    item('dumbbell-fly', 3, S.db),
+    item('deficit-push-up', 2, S.pushup, { note: 'Go deep between the plates; stop 1–2 reps short of failure.' }),
+    item('dumbbell-fly', 2, S.db, { repMin: 15, repMax: 25, rest: 75, note: 'Light dumbbells: 3-second lowering and a 1-second pause in the stretch, close to failure.' }),
     item('dumbbell-lateral-raise', 3, S.db),
   ] },
-  { id: 'home-pull-a', group: 'Home split', name: 'Pull A: Lats', items: [
+  { id: 'home-pull-a', group: 'Home split', name: 'Pull A: Lats + Squat', items: [
     ...BANDS,
     item('pull-up', 3, S.pullup),
     item('chin-up', 2, S.pullup),
     item('hanging-straight-leg-hip-raise', 3, S.pullup),
     item('barbell-curl', 3, S.pullup, { note: 'Bar is already out of the rack.' }),
     item('barbell-bent-over-row', 3, S.floor),
-    item('barbell-romanian-deadlift', 3, S.floor, { note: 'Only leg move today.' }),
+    item('barbell-squat', 3, S.squat, { note: 'Only leg move today. Bar back into the rack at squat height.' }),
     item('dumbbell-rear-delt-fly', 3, S.db),
     item('dumbbell-hammer-curl', 2, S.db),
   ] },
-  { id: 'home-push-b', group: 'Home split', name: 'Push B: Shoulders & Triceps', items: [
+  { id: 'home-push-b', group: 'Home split', name: 'Push B: Upper Chest & Shoulders', items: [
     ...BANDS,
-    item('barbell-incline-bench-press', 3, S.incline),
-    item('barbell-close-grip-bench-press', 3, S.incline, { note: 'Flatten the bench; same hooks.' }),
+    item('barbell-incline-bench-press', 4, S.incline, { ramp: 3, note: 'Upper chest first. Bench at about 30°.' }),
+    item('deficit-push-up', 3, S.pushup, { ramp: 2 }),
     item('single-arm-landmine-press', 3, S.landmine),
-    item('landmine-squat', 3, S.landmine, { note: 'Only leg move today.' }),
     item('landmine-twist', 3, S.landmine),
-    item('tricep-dip', 3, S.dips, { note: 'Stop at upper arm parallel. Skip if the shoulder complains.' }),
+    item('tricep-dip', 3, S.dips, { note: 'Stay upright; stop at upper arm parallel. Skip if the shoulder complains.' }),
     item('dumbbell-lateral-raise', 3, S.db),
-    item('dumbbell-shoulder-press', 2, S.db),
   ] },
   { id: 'home-pull-b', group: 'Home split', name: 'Pull B: Back Thickness', items: [
     ...BANDS,

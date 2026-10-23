@@ -84,6 +84,9 @@ function viewWorkout() {
     html += card(`<b>Time for a lighter week.</b> You've trained ${st.weeks} weeks straight. One deload week (lighter loads, fewer sets) lets joints and the shoulder catch up.<div class="row"><button class="btn" data-act="start-deload">Start deload week</button><button class="btn ghost" data-act="snooze-deload">Remind me next week</button></div>`, 'warn');
   }
   const next = nextHomeDay();
+  if (S.upgradeNote) html += card(`${h(S.upgradeNote)}<div class="row"><button class="btn small ghost" data-act="dismiss-upgrade">Got it</button></div>`, 'info');
+  const gain = L.gainCheck(S.bodyweight, today());
+  if (gain && gain.status !== 'ok') html += card(gainMessage(gain), 'warn');
   if (next) html += card(`<small class="muted">Up next in your home split</small><div class="up-next"><b>${h(next.name)}</b><button class="btn primary" data-act="start" data-id="${h(next.id)}">Start</button></div>`);
   if (!S.sessions.length) html += card('New here? Import your Caliber history in <a href="#" data-act="tab" data-tab="settings">Settings</a> so suggestions start from your real numbers.', 'info');
   html += '<h2>All routines</h2>';
@@ -94,11 +97,21 @@ function viewWorkout() {
   return html;
 }
 
-function makeEntry(it, deload) {
+// Build-up: the first 2 sessions of a routine since the program started use `ramp` sets.
+function rampSets(it, routineId) {
+  if (!it.ramp || !routineId) return null;
+  const since = S.settings.programStart || '';
+  const done = S.sessions.filter((x) => x.routineId === routineId && x.date >= since).length;
+  return done < 2 ? Math.min(it.ramp, it.sets ?? 3) : null;
+}
+
+function makeEntry(it, deload, routineId) {
   const ex = EX[it.exId];
   const repMin = it.repMin ?? ex.repMin, repMax = it.repMax ?? ex.repMax;
   const hist = L.exerciseHistory(S.sessions, it.exId);
-  const sug = L.suggest(ex, { sets: it.sets ?? 3, repMin, repMax }, hist, S.settings, { deload, today: today() });
+  const ramp = rampSets(it, routineId);
+  const sug = L.suggest(ex, { sets: ramp ?? it.sets ?? 3, repMin, repMax }, hist, S.settings, { deload, today: today() });
+  if (ramp) sug.message = `Build-up: ${ramp} sets this time; all ${it.sets} sets from your 3rd session of this day. ${sug.message}`;
   const last = hist[hist.length - 1];
   const lt = L.loadType(ex.equip);
   const sets = [];
@@ -117,7 +130,7 @@ function startWorkout(routineId) {
   const r = S.routines.find((x) => x.id === routineId);
   const deload = deloadActive();
   S.active = { id: uid(), date: today(), routineId: r?.id || null, title: r?.name || 'Workout', startedAt: Date.now(), deload, note: '',
-    entries: (r?.items || []).filter((it) => EX[it.exId]).map((it) => makeEntry(it, deload)) };
+    entries: (r?.items || []).filter((it) => EX[it.exId]).map((it) => makeEntry(it, deload, r.id)) };
   persist();
   ui.tab = 'workout';
   render();
@@ -487,10 +500,31 @@ function viewProgress() {
 
 // ---------- body tab ----------
 
+function gainMessage(g) {
+  if (g.status === 'low') return `<b>Weight isn't going up</b> (${g.lbPerWeek >= 0 ? '+' : ''}${g.lbPerWeek} lb/week over ${g.weeks} weeks). Muscle growth needs a small surplus: add about 200–300 calories a day (e.g. a shake or an extra snack) and recheck in 2 weeks.`;
+  if (g.status === 'high') return `<b>Gaining fast</b> (+${g.lbPerWeek} lb/week). Above about 0.5% of bodyweight a week, more of the gain tends to be fat. Trim about 200 calories a day.`;
+  return `<b>On track:</b> +${g.lbPerWeek} lb/week, inside the lean-gain range.`;
+}
+
+function proteinCard(lastW) {
+  if (!lastW) return card('<b>Daily protein</b><p class="muted small">Log your weight above to get a protein target.</p>');
+  const target = L.proteinTarget(lastW, S.settings.proteinPerKg);
+  const t = today();
+  const hit = !!S.protein[t];
+  let streak = 0;
+  for (let k = 0; k < 7; k++) if (S.protein[addDays(t, -k)]) streak++;
+  return card(`<b>Daily protein: ${target} g</b>
+    <p class="muted small">${S.settings.proteinPerKg} g per kg of bodyweight a day, where extra protein stopped adding muscle in the largest review (Morton et al. 2018). Spread over 3–5 meals, e.g. ${Math.round(target / 4)} g × 4.</p>
+    <button class="btn wide ${hit ? 'primary' : 'ghost'}" data-act="protein-toggle">${hit ? '✓ Hit my protein today' : 'Tap when you hit your protein today'}</button>
+    <p class="small">Last 7 days: <b>${streak}/7</b> days</p>`);
+}
+
 function viewBody() {
   const bw = L.movingAverage(S.bodyweight);
   const last = bw[bw.length - 1];
-  let html = `<h2>Bodyweight</h2>${card(`<div class="grid2">
+  const gain = L.gainCheck(S.bodyweight, today());
+  let html = `<h2>Nutrition</h2>${proteinCard(last?.avg)}${card(gain ? gainMessage(gain) + '<p class="muted small">Target for lean gain: about +0.25–0.5% of bodyweight per week (roughly +0.5–1 lb/week for you).</p>' : '<b>Weight trend</b><p class="muted small">Weigh in a few times a week (same time, after the bathroom). After about 2 weeks you\'ll see whether you\'re gaining at the lean-gain rate.</p>', gain && gain.status !== 'ok' ? 'warn' : '')}
+  <h2>Bodyweight</h2>${card(`<div class="grid2">
       <label class="field">Date<input type="date" id="bw-date" value="${today()}"></label>
       <label class="field">Weight (lb)<input type="number" inputmode="decimal" step="0.1" id="bw-w" placeholder="${last ? last.w : ''}"></label>
     </div><button class="btn" data-act="bw-add">Save weight</button>
@@ -650,7 +684,7 @@ const actions = {
   },
   'add-ex': () => openModal(`<h2>Add exercise</h2><select id="add-ex-id">${exOptions()}</select><button class="btn" data-act="add-ex-ok">Add</button>`),
   'add-ex-ok': () => {
-    S.active.entries.push(makeEntry({ exId: $('#add-ex-id').value, sets: 3 }, S.active.deload));
+    S.active.entries.push(makeEntry({ exId: $('#add-ex-id').value, sets: 3 }, S.active.deload, null));
     closeModal(); persist(); render();
   },
   howto: (d) => {
@@ -663,6 +697,8 @@ const actions = {
       <p class="muted small">Videos open YouTube and need internet. Start light while you learn a new movement.</p>`);
     if (ANIM[d.id]) stopAnim = mountAnimation($('#anim'), d.id);
   },
+  'dismiss-upgrade': () => { delete S.upgradeNote; persist(); render(); },
+  'protein-toggle': () => { const t = today(); if (S.protein[t]) delete S.protein[t]; else S.protein[t] = true; persist(); render(); },
   'close-modal': closeModal,
   't-minus': () => { if (S.timer) { S.timer.end -= 15000; persist(); tick(); } },
   't-plus': () => { if (S.timer) { S.timer.end += 15000; S.timer.total += 15; S.timer.fired = false; persist(); renderTimer(); } },

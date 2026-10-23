@@ -157,3 +157,32 @@ test('animations move every changing value smoothly (no jumps)', async () => {
     assert.notEqual(frameSVG(d, 0.5), frameSVG(d, 1), `${id}: jumps straight to the end pose`);
   }
 });
+
+test('push-ups suggest adding a plate once the top of the range is hit', () => {
+  const ex = EX['deficit-push-up'];
+  const hist = L.exerciseHistory(['2026-10-01', '2026-10-04', '2026-10-08'].map((d) => session(d, ex.id, [[0, 15], [0, 15], [0, 15]])), ex.id);
+  const s = L.suggest(ex, { sets: 3 }, hist, settings, { today: '2026-10-09' });
+  assert.equal(s.kind, 'up');
+  assert.equal(s.weight, 10);
+});
+
+test('chest-priority split gives ~18 direct chest sets a week over 2 days', () => {
+  const chest = (id) => ROUTINES.find((r) => r.id === id).items.filter((i) => EX[i.exId].primary.includes('chest')).reduce((a, i) => a + i.sets, 0);
+  const a = chest('home-push-a'), b = chest('home-push-b');
+  assert.ok(a + b >= 16 && a + b <= 20, `${a}+${b}`);
+  assert.ok(a > 0 && b > 0);
+  for (const id of ['home-push-a', 'home-push-b']) {
+    const r = ROUTINES.find((x) => x.id === id);
+    assert.ok(!r.items.some((i) => EX[i.exId].primary.some((m) => ['quads', 'hamstrings/glutes'].includes(m))), `${id} has no legs`);
+    assert.ok(EX[r.items.find((i) => EX[i.exId].equip !== 'band').exId].primary.includes('chest'), `${id} starts with chest`);
+  }
+});
+
+test('lean-gain check flags flat weight and fast gain', () => {
+  const series = (start, perWeek) => Array.from({ length: 15 }, (_, i) => ({ date: L.todayISO(new Date(Date.parse('2026-10-01') + i * L.DAY + 43200000)), w: start + (perWeek / 7) * i }));
+  assert.equal(L.gainCheck(series(180, 0), '2026-10-16').status, 'low');
+  assert.equal(L.gainCheck(series(180, 0.6), '2026-10-16').status, 'ok');
+  assert.equal(L.gainCheck(series(180, 2.5), '2026-10-16').status, 'high');
+  assert.equal(L.gainCheck(series(180, 0).slice(0, 5), '2026-10-16'), null);
+  assert.equal(L.proteinTarget(176), 130);
+});

@@ -36,10 +36,11 @@ function sideGeom(p) {
   else H = sub(sub(sub(at, dir(fa, LEN.fa)), dir(ua, LEN.ua)), tvec(p.t, tl));
   const S = add(H, tvec(p.t, tl));
   let E = add(S, dir(ua, LEN.ua)), W = add(E, dir(fa, LEN.fa));
-  if (p.hand) { W = add(S, p.hand); E = ik(S, W, p.bend); }
+  if (p.handAt) { W = p.handAt; E = ik(S, W, p.bend); }
+  else if (p.hand) { W = add(S, p.hand); E = ik(S, W, p.bend); }
   else if (p.uh != null) { E = add(S, [Math.cos(rad(p.uh)) * LEN.ua, 0]); W = add(E, dir(fa, LEN.fa)); }
   let E2 = add(S, dir(ua2, LEN.ua)), W2 = add(E2, dir(fa2, LEN.fa));
-  if (p.hand || p.uh != null) { E2 = E; W2 = W; }
+  if (p.hand || p.handAt || p.uh != null) { E2 = E; W2 = W; }
   const K = add(H, dir(p.th, LEN.th)), A = add(K, dir(p.sh, LEN.sh)), T = add(A, dir(foot, LEN.foot));
   const th2 = p.th2 ?? p.th, sh2 = p.sh2 ?? p.sh;
   const K2 = add(H, dir(th2, LEN.th)), A2 = add(K2, dir(sh2, LEN.sh)), T2 = add(A2, dir(p.foot2 ?? foot, LEN.foot));
@@ -286,6 +287,11 @@ export const ANIM = {
     floor: false,
     a: { anchor: ['hand', [100, 12]], t: 0, th: 6, sh: -8, ua: 180, fa: 180 }, b: { anchor: ['hand', [100, 12]], t: 0, th: 6, sh: -8, ua: 34, fa: 172 },
     eq: [{ k: 'dot', at: [100, 12], r: 4 }],
+  },
+  'deficit-push-up': {
+    a: { anchor: ['ankle', [166, ANK]], t: -54, th: 54, sh: 54, foot: 150, handAt: [66, 132], bend: 'up' },
+    b: { anchor: ['ankle', [166, ANK]], t: -82, th: 82, sh: 82, foot: 170, handAt: [66, 132], bend: 'up' },
+    eq: [{ k: 'rect', x: 54, y: 134, w: 26, h: 22, cls: 'static-f' }],
   },
   'tricep-dip': {
     a: { anchor: ['hand', [104, 76]], t: 5, th: 12, sh: -62, ua: 0, fa: 0, foot: 30 }, b: { anchor: ['hand', [104, 76]], t: 9, th: 18, sh: -55, ua: -82, fa: 8, foot: 30 },

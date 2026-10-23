@@ -4,7 +4,7 @@ An offline iPhone web app for tracking lifts, with progression nudges, a shoulde
 
 ## Features
 
-- **Routines.** A 4-day home Push/Pull split built for muscle growth, plus home and gym versions of the routines from your Caliber history. Each day is ordered so the rack only changes when it has to, and the app shows a "Setup change" banner at each change. You can create, copy, edit and reorder routines.
+- **Routines.** A 4-day home Push/Pull split built for chest-priority muscle growth (about 18 direct chest sets a week over 2 push days, flat and incline, with a 2-session build-up), plus home and gym versions of the routines from your Caliber history. Each day is ordered so the rack only changes when it has to, and the app shows a "Setup change" banner at each change. You can create, copy, edit and reorder routines.
 - **How to.** Every exercise has a How to button with an animated stick-figure demo, short form cues, a shoulder-safety tip in rehab mode, and a link to YouTube videos.
 - **Logging.** Each set is pre-filled with the suggested weight and reps, so one tap on ✓ logs it. Each set also has an optional "reps left in tank" (RIR) rating. Extras: warm-up set generator, plate calculator, exercise swap, and notes per exercise and per workout. The screen stays awake during a workout, and an unfinished workout resumes after the app is closed.
 - **Progression nudge.**
@@ -14,7 +14,7 @@ An offline iPhone web app for tracking lifts, with progression nudges, a shoulde
 - **🤕 Shoulder button.** It flags the set and lowers the next session's weight by about 10%. Progression pauses until you have a pain-free session. If a lift is flagged twice in a row, the app suggests checking with your physio.
 - **Rest timer.** It starts when you tick a set. Defaults: 2–3 minutes for compound lifts, 60–90 seconds for isolation lifts and 30 seconds for band work. It adds 30 seconds after missed reps, a set with 0 reps left in the tank, or a shoulder flag. It beeps, vibrates where the device supports it, and flashes when rest is over.
 - **Progress.** A coach summary, weekly sets per muscle against the 10–20 set range, a chart per exercise showing your injury date and pre-injury best, personal records and workout history.
-- **Body.** A bodyweight log with a 7-day average, and a simple cardio log.
+- **Body.** A daily protein target (1.6 g/kg) with a "hit protein today" tick, a lean-gain check that flags when weight isn't rising about 0.25–0.5% a week, a bodyweight log with a 7-day average, and a simple cardio log.
 - **Optional Claude review.** This sends your last 8 weeks of training to Anthropic using an API key you enter in Settings. The key is stored only on your device.
 - **Import.** You can import Caliber strength and cardio CSV exports. The import fixes cardio durations that were exported 60 times too large.
 
