@@ -78,10 +78,10 @@ function lastDone(routineId) {
   return d === 0 ? 'today' : d === 1 ? 'yesterday' : d < 7 ? `${d} days ago` : d < 60 ? `${Math.round(d / 7)} wk ago` : 'a while ago';
 }
 
-const estimateMin = (r) => Math.max(10, Math.round(r.items.reduce((a, it) => a + (it.sets ?? 3) * ((it.rest ?? EX[it.exId]?.rest ?? 90) + 40), 0) / 300) * 5);
+const routineMin = (r) => L.routineMinutes(r.items.filter((it) => EX[it.exId]), EX);
 
 function routineRow(r, right) {
-  return `<button class="routine" data-act="start" data-id="${h(r.id)}"><span>${h(r.name.replace(': ', ' · '))}</span><small>${h(right ?? lastDone(r.id))}${ic('chevron', 16)}</small></button>`;
+  return `<button class="routine" data-act="start" data-id="${h(r.id)}"><span>${h(r.name.replace(': ', ' · '))}</span><small>${routineMin(r)} min${(right ?? lastDone(r.id)) ? ` · ${h(right ?? lastDone(r.id))}` : ''}${ic('chevron', 16)}</small></button>`;
 }
 
 function nextHomeDay() {
@@ -109,7 +109,7 @@ function viewWorkout() {
   if (next) {
     const [a, b] = splitTitle(next.name);
     const n = next.items.filter((i) => EX[i.exId]?.equip !== 'band').length;
-    html += `<section class="hero"><span class="label">Up next</span><span class="title">${h(a)}</span><span class="meta">${b ? `${h(b)} · ` : ''}${n} exercises · about ${estimateMin(next)} min</span><button class="btn big" data-act="start" data-id="${h(next.id)}">Start workout</button></section>`;
+    html += `<section class="hero"><span class="label">Up next</span><span class="title">${h(a)}</span><span class="meta">${b ? `${h(b)} · ` : ''}${n} exercises · about ${routineMin(next)} min</span><button class="btn big" data-act="start" data-id="${h(next.id)}">Start workout</button></section>`;
   }
 
   const mon = addDays(t, -((now.getDay() + 6) % 7));
@@ -163,7 +163,7 @@ function makeEntry(it, deload, routineId) {
     sets.push({ w, r, pw: w, done: false });
   }
   return { exId: it.exId, station: it.station || '', itemNote: it.note || '', repMin, repMax, rest: it.rest ?? ex.rest,
-    ramp, fullSets: it.sets, suggestion: { kind: sug.kind, message: sug.message, head: sugHead(sug, lt) }, sets };
+    ss: it.ss || null, ramp, fullSets: it.sets, suggestion: { kind: sug.kind, message: sug.message, head: sugHead(sug, lt) }, sets };
 }
 
 // One-line headline for a suggestion; the full reason shows on tap.
@@ -230,6 +230,11 @@ function viewActive() {
     if (!ex || ex.equip === 'band') return;
     if (e.station && e.station !== prev) html += `<div class="station label">${prev ? 'Setup change' : 'Setup'} · ${h(e.station)}</div>`;
     prev = e.station || prev;
+    const before = a.entries[i - 1];
+    if (e.ss && before?.ss !== e.ss) {
+      const names = a.entries.slice(i).filter((x, k, arr) => arr.slice(0, k + 1).every((y) => y.ss === e.ss)).map((x) => EX[x.exId]?.name);
+      html += `<div class="ss-label"><span class="label">Superset</span><span>${h(names.join(' + '))}: alternate sets, rest after both</span></div>`;
+    }
     html += entryCard(e, i, ex);
   });
   html += '<div class="row"><button class="btn ghost" data-act="add-ex">' + ic('plus', 18) + ' Add exercise</button></div>';
@@ -442,7 +447,7 @@ function viewRoutines() {
   if (ui.editRoutine) return viewRoutineEditor();
   let html = `<div class="row"><h2 class="grow">Plans</h2><button class="btn small" data-act="new-routine">${ic('plus', 16)} New</button></div>`;
   for (const [g, rs] of groupBy(S.routines, (r) => r.group || 'My routines')) {
-    html += `<h3>${h(g)}</h3>` + rs.map((r) => `<div class="card r-card"><div class="grow"><b>${h(r.name)}</b><small class="muted">${h(r.items.filter((i) => EX[i.exId]?.equip !== 'band').map((i) => EX[i.exId]?.name || i.exId).join(' · '))}</small></div>
+    html += `<h3>${h(g)}</h3>` + rs.map((r) => `<div class="card r-card"><div class="grow"><b>${h(r.name)}</b><small class="muted">${h(r.items.filter((i) => EX[i.exId]?.equip !== 'band').map((i) => EX[i.exId]?.name || i.exId).join(' · '))}</small><small class="r-meta">${routineMin(r)} min · ${r.items.reduce((a, it) => a + (it.sets ?? 3), 0)} sets</small></div>
       <div class="col"><button class="btn small primary" data-act="start" data-id="${h(r.id)}">Start</button><button class="btn small ghost" data-act="edit-routine" data-id="${h(r.id)}">Edit</button><button class="btn small ghost" data-act="dup-routine" data-id="${h(r.id)}">Copy</button></div></div>`).join('');
   }
   html += '<h2>Custom exercises</h2>';
@@ -463,10 +468,11 @@ function viewRoutineEditor() {
   const r = S.routines.find((x) => x.id === ui.editRoutine);
   if (!r) { ui.editRoutine = null; return viewRoutines(); }
   let html = `<div class="row"><h2 class="grow">Edit routine</h2><button class="btn primary" data-act="done-routine">Done</button></div>
+    <p class="r-est"><b>About ${routineMin(r)} min</b> <span class="muted small">· ${r.items.reduce((x, it) => x + (it.sets ?? 3), 0)} sets</span></p>
     <label class="field">Name<input data-r="name" value="${h(r.name)}"></label>
     <label class="field">Group<input data-r="group" value="${h(r.group || '')}" placeholder="My routines"></label>
     <datalist id="stations">${STATIONS.map((s) => `<option value="${h(s)}">`).join('')}</datalist>
-    <p class="muted small">Exercises in a row with the same setup need no rack change. Leave reps/rest blank to use each exercise's default.</p>`;
+    <p class="muted small">Exercises in a row with the same setup need no rack change. Give neighbouring exercises the same superset letter to alternate them. Leave reps or rest blank to use each exercise's default.</p>`;
   html += r.items.map((it, k) => {
     const ex = EX[it.exId] || {};
     return `<div class="card ri">
@@ -477,7 +483,8 @@ function viewRoutineEditor() {
         <label>Max reps<input type="number" inputmode="numeric" data-ri="${k}.repMax" value="${it.repMax ?? ''}" placeholder="${ex.repMax ?? ''}"></label>
         <label>Rest (s)<input type="number" inputmode="numeric" data-ri="${k}.rest" value="${it.rest ?? ''}" placeholder="${ex.rest ?? ''}"></label>
       </div>
-      <label class="field">Setup<input list="stations" data-ri="${k}.station" value="${h(it.station || '')}"></label>
+      <div class="grid2"><label class="field">Setup<input list="stations" data-ri="${k}.station" value="${h(it.station || '')}"></label>
+      <label class="field">Superset group<input data-ri="${k}.ss" value="${h(it.ss || '')}" placeholder="e.g. A" maxlength="2"></label></div>
       <label class="field">Note<input data-ri="${k}.note" value="${h(it.note || '')}"></label>
       <div class="row"><button class="btn small ghost" data-act="howto" data-id="${h(it.exId)}">How to</button><button class="btn small ghost" data-act="ri-up" data-k="${k}">↑</button><button class="btn small ghost" data-act="ri-down" data-k="${k}">↓</button><button class="btn small ghost danger" data-act="ri-del" data-k="${k}">Remove</button></div>
     </div>`;
@@ -697,8 +704,13 @@ const actions = {
     if (!s.warmup && s.w !== s.pw) for (const n of e.sets.slice(d.j + 1)) if (!n.done && !n.warmup && n.w === s.pw) { n.w = s.w; n.pw = s.w; }
     const later = e.sets.slice(d.j + 1).some((x) => !x.done);
     const nextEx = S.active.entries.slice(+d.i + 1).find((x) => x.sets.some((y) => !y.done));
-    const label = later ? ex.name : nextEx ? `next: ${EX[nextEx.exId]?.name}` : 'last set done';
-    if (later || nextEx) startTimer(s.warmup ? 60 : L.restSeconds(ex, e, s), label, `${d.i}.${d.j}`);
+    // Superset: hop straight to the partner (15 s), full rest only after the round.
+    const grp = e.ss && !s.warmup ? S.active.entries.filter((x) => x.ss === e.ss) : [];
+    const partner = grp.slice(grp.indexOf(e) + 1).find((x) => x.sets.some((y) => !y.done && !y.warmup));
+    const firstOpen = grp.find((x) => x.sets.some((y) => !y.done && !y.warmup));
+    if (partner) startTimer(15, `go: ${EX[partner.exId]?.name}`, `${d.i}.${d.j}`);
+    else if (grp.length && firstOpen) startTimer(Math.max(L.restSeconds(ex, e, s), ...grp.map((x) => x.rest)), `next round: ${EX[firstOpen.exId]?.name}`, `${d.i}.${d.j}`);
+    else if (later || nextEx) startTimer(s.warmup ? 60 : L.restSeconds(ex, e, s), later ? ex.name : nextEx ? `next: ${EX[nextEx.exId]?.name}` : '', `${d.i}.${d.j}`);
     persist(); render();
   },
   rir: (d) => {
@@ -1016,7 +1028,7 @@ document.addEventListener('change', (ev) => {
     } else if (t.value.trim()) it[f] = t.value.trim();
     else delete it[f];
     persist();
-    if (f === 'exId') render();
+    if (['exId', 'sets', 'rest', 'ss'].includes(f)) render();
   } else if (t.dataset.actChange === 'prog-ex') {
     ui.progEx = t.value; render();
   } else if (t.dataset.import && t.files?.[0]) {

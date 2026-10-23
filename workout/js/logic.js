@@ -302,6 +302,26 @@ export function gainCheck(entries, today) {
 
 export const proteinTarget = (lb, perKg = 1.6) => Math.round((lb / 2.2046) * perKg / 5) * 5;
 
+// Expected session length in minutes: ~40 s per set, the item's rest between sets/rounds,
+// 15 s to switch inside a superset, 30 s to set up each new exercise or superset.
+export function routineMinutes(items, exMap, { work = 40, swap = 15, change = 30 } = {}) {
+  let sec = 0;
+  for (let k = 0; k < items.length;) {
+    const grp = [items[k]];
+    while (items[k].ss && items[k + grp.length]?.ss === items[k].ss) grp.push(items[k + grp.length]);
+    const sets = grp.map((g) => g.sets ?? 3);
+    const rest = Math.max(...grp.map((g) => g.rest ?? exMap[g.exId]?.rest ?? 90));
+    const rounds = Math.max(...sets);
+    for (let r = 0; r < rounds; r++) {
+      const n = sets.filter((x) => x > r).length;
+      sec += n * work + (n - 1) * swap + (r < rounds - 1 ? rest : 0);
+    }
+    sec += change;
+    k += grp.length;
+  }
+  return Math.round(sec / 60);
+}
+
 export function movingAverage(entries, days = 7) {
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
   return sorted.map((e) => {

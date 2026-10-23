@@ -186,3 +186,32 @@ test('lean-gain check flags flat weight and fast gain', () => {
   assert.equal(L.gainCheck(series(180, 0).slice(0, 5), '2026-10-16'), null);
   assert.equal(L.proteinTarget(176), 130);
 });
+
+test('every home-split day fits in 45 minutes including the band warm-up', () => {
+  for (const r of ROUTINES.filter((x) => x.group === 'Home split')) {
+    const min = L.routineMinutes(r.items, EX);
+    assert.ok(min <= 45, `${r.name}: ${min} min`);
+  }
+});
+
+test('supersets never need a rack or plate change mid-superset', () => {
+  const free = ['dumbbell', 'band'];
+  const bar = ['barbell', 'landmine', 'ezbar', 'trapbar'];
+  for (const r of ROUTINES) {
+    const groups = {};
+    r.items.forEach((it, k) => { if (it.ss) (groups[`${it.ss}`] ||= []).push({ it, k }); });
+    for (const [key, g] of Object.entries(groups)) {
+      assert.ok(g.every((x, n) => n === 0 || x.k === g[n - 1].k + 1), `${r.id} ${key}: superset items must be next to each other`);
+      const fixed = g.filter(({ it }) => !free.includes(EX[it.exId].equip));
+      assert.ok(new Set(fixed.map(({ it }) => it.station)).size <= 1, `${r.id} ${key}: mixes rack stations`);
+      assert.ok(g.filter(({ it }) => bar.includes(EX[it.exId].equip)).length <= 1, `${r.id} ${key}: two barbell moves would need plate changes`);
+    }
+  }
+});
+
+test('routine time model: supersets save time versus straight sets', () => {
+  const straight = [{ exId: 'barbell-shrug', sets: 3, rest: 90 }, { exId: 'dumbbell-lateral-raise', sets: 3, rest: 60 }];
+  const superset = straight.map((x) => ({ ...x, ss: 'A' }));
+  assert.ok(L.routineMinutes(superset, EX) < L.routineMinutes(straight, EX));
+  assert.equal(L.routineMinutes([{ exId: 'barbell-bench-press', sets: 3, rest: 150 }], EX), 8); // 3×40 s + 2×150 s + 30 s = 7.5 min
+});
