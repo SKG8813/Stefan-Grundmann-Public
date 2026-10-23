@@ -2,6 +2,7 @@ import { MUSCLES, STATIONS } from './data.js';
 import * as L from './logic.js';
 import { load, save, exerciseMap, exportJSON, importJSON, uid, DEFAULT_SETTINGS } from './store.js';
 import { lineChart } from './charts.js';
+import { HOWTO, videoURL } from './howto.js';
 
 let S = load();
 let EX = exerciseMap(S);
@@ -155,6 +156,7 @@ function entryCard(e, i, ex) {
   if (e.suggestion?.message) html += `<div class="sug ${h(e.suggestion.kind)}">${h(e.suggestion.message)}</div>`;
   html += '<div class="sets">' + e.sets.map((s, j) => setRow(e, i, s, j, lt)).join('') + '</div>';
   html += `<div class="ex-actions">
+    <button class="btn small ghost" data-act="howto" data-id="${h(ex.id)}">How to</button>
     <button class="btn small ghost" data-act="add-set" data-i="${i}">+ Set</button>
     ${lt === 'load' && ex.kind === 'compound' ? `<button class="btn small ghost" data-act="warmup" data-i="${i}">Warm-up</button>` : ''}
     ${lt === 'load' && ['barbell', 'landmine'].includes(ex.equip) ? `<button class="btn small ghost" data-act="plates" data-i="${i}">Plates</button>` : ''}
@@ -376,7 +378,7 @@ function viewRoutineEditor() {
       </div>
       <label class="field">Setup<input list="stations" data-ri="${k}.station" value="${h(it.station || '')}"></label>
       <label class="field">Note<input data-ri="${k}.note" value="${h(it.note || '')}"></label>
-      <div class="row"><button class="btn small ghost" data-act="ri-up" data-k="${k}">↑</button><button class="btn small ghost" data-act="ri-down" data-k="${k}">↓</button><button class="btn small ghost danger" data-act="ri-del" data-k="${k}">Remove</button></div>
+      <div class="row"><button class="btn small ghost" data-act="howto" data-id="${h(it.exId)}">How to</button><button class="btn small ghost" data-act="ri-up" data-k="${k}">↑</button><button class="btn small ghost" data-act="ri-down" data-k="${k}">↓</button><button class="btn small ghost danger" data-act="ri-del" data-k="${k}">Remove</button></div>
     </div>`;
   }).join('');
   html += `<div class="row"><select id="ri-new">${exOptions()}</select><button class="btn" data-act="ri-add">+ Add</button></div>
@@ -647,6 +649,14 @@ const actions = {
   'add-ex-ok': () => {
     S.active.entries.push(makeEntry({ exId: $('#add-ex-id').value, sets: 3 }, S.active.deload));
     closeModal(); persist(); render();
+  },
+  howto: (d) => {
+    const ex = EX[d.id], tip = HOWTO[d.id];
+    openModal(`<h2>${h(ex.name)}</h2>
+      ${tip ? `<ol class="howto">${tip.steps.map((x) => `<li>${h(x)}</li>`).join('')}</ol>` : '<p class="muted">No written cues for this exercise yet. The video search below will show you how.</p>'}
+      ${tip?.shoulder && S.settings.rehabMode ? card(`<b>🩹 Shoulder tip:</b> ${h(tip.shoulder)}`, 'warn') : ''}
+      <a class="btn wide video" href="${h(videoURL(ex.name))}" target="_blank" rel="noopener">▶ Watch videos on YouTube</a>
+      <p class="muted small">Videos open YouTube and need internet. Start light while you learn a new movement.</p>`);
   },
   'close-modal': closeModal,
   't-minus': () => { if (S.timer) { S.timer.end -= 15000; persist(); tick(); } },

@@ -183,3 +183,5 @@ body.flash #timer { animation: flash .4s 4 alternate; }
   .set { grid-template-columns: 22px 1fr 10px 1fr 50px 40px; gap: 4px; }
   .vrow { grid-template-columns: 96px 1fr 32px; }
 }
+.howto { padding-left: 22px; } .howto li { margin: 6px 0; }
+a.btn.video { display: block; text-align: center; text-decoration: none; box-sizing: border-box; }

@@ -132,3 +132,8 @@ test('deload becomes due after 6 straight weeks', () => {
   assert.equal(L.deloadStatus(sessions, settings, '2026-10-22').due, true);
   assert.equal(L.deloadStatus(sessions, { ...settings, lastDeload: '2026-10-15' }, '2026-10-22').due, false);
 });
+
+test('every built-in exercise has how-to cues', async () => {
+  const { HOWTO } = await import('../js/howto.js');
+  for (const e of EXERCISES) assert.ok(HOWTO[e.id]?.steps?.length >= 3, e.id);
+});
