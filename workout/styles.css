@@ -142,24 +142,31 @@ textarea { resize: vertical; }
 .sug.up, .sug.tempo { background: var(--signal); border-color: var(--signal); color: var(--on-signal); }
 .sug.pain, .sug.pain2 { border-color: var(--text); }
 .why { font-size: .85rem; color: var(--muted); margin: 8px 0 0; }
-.sets { display: grid; grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) 48px 36px; column-gap: 8px; row-gap: 8px; align-items: center; margin-top: 14px; }
-.sets.no-pain { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) 48px; }
-.sets .hd { font-size: .66rem; font-weight: 600; letter-spacing: .1em; color: var(--muted); }
-.sets .sn { color: var(--muted); font-size: .9rem; }
-.sets .num { font-size: 1.3rem; font-weight: 600; min-height: 46px; padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 12px; }
+.sets { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.srow { display: grid; grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) 48px 36px; column-gap: 8px; align-items: center; padding: 4px 4px 4px 6px; border-radius: 14px; }
+.sets.no-pain .srow { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) 48px; }
+.srow.hd { padding-top: 0; padding-bottom: 0; font-size: .66rem; font-weight: 600; letter-spacing: .1em; color: var(--muted); }
+.whint { font-size: .75rem; color: var(--muted); margin: -2px 0 2px 6px; }
+.srow .sn { color: var(--muted); font-size: .9rem; display: flex; align-items: center; }
+.sets .num { font-size: 1.3rem; font-weight: 600; min-height: 46px; padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--bg); }
 .sets .num:focus { border-color: var(--text); }
 .sets .num.band { display: flex; align-items: center; color: var(--muted); font-size: .9rem; font-weight: 500; border-style: dashed; }
-.sets .done .num, .sets .num.done { border-color: transparent; padding-left: 0; }
-.sets .warm-set { color: var(--muted); font-size: 1rem; }
+.srow.done { background: color-mix(in srgb, var(--signal) 22%, transparent); }
+.srow.done .num { border-color: transparent; background: transparent; font-weight: 800; }
+.srow.done .sn { color: var(--text); }
+.srow.done .done-btn { background: var(--signal); border-color: var(--signal); color: var(--on-signal); }
+.srow.warm .num { color: var(--muted); font-size: 1rem; }
+.done-tag { display: inline-flex; align-items: center; gap: 3px; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--on-signal); background: var(--signal); border-radius: 999px; padding: 2px 8px 2px 6px; vertical-align: 4px; }
+.ex.complete .ex-head h3 { color: var(--text); }
 .done-btn { width: 44px; height: 44px; border-radius: 999px; border: 1.5px solid var(--text); background: transparent; color: var(--text); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 .done-btn.on { background: var(--text); color: var(--bg); }
 .pain-btn { width: 36px; height: 36px; border-radius: 999px; border: 0; background: transparent; color: var(--faint); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 .pain-btn.on { background: var(--text); color: var(--bg); }
-.rir { grid-column: 2 / -1; display: flex; align-items: center; gap: 4px; margin-top: -2px; }
+.rir { display: flex; align-items: center; gap: 4px; padding-left: 40px; flex-wrap: wrap; }
 .rir .small { font-size: .72rem; color: var(--muted); margin-right: 4px; }
 .chip { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; min-width: 34px; min-height: 32px; padding: 0 6px; font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; flex: none; }
 .chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
-.rir-tag { grid-column: 2 / -1; justify-self: start; background: none; border: 0; padding: 0; margin-top: -4px; font: inherit; font-size: .75rem; color: var(--muted); cursor: pointer; }
+.rir-tag { align-self: flex-start; background: none; border: 0; padding: 0 0 0 40px; margin-top: -2px; font: inherit; font-size: .75rem; color: var(--muted); cursor: pointer; }
 .menu { display: flex; flex-direction: column; }
 .menu button { display: flex; align-items: center; gap: 12px; padding: 14px 0; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text); font: inherit; font-size: 1rem; text-align: left; cursor: pointer; min-height: 52px; }
 .menu button.danger { color: var(--danger); }
@@ -203,8 +210,15 @@ body.flash #timer { animation: flash .35s 4 alternate; }
 /* Sheets and toast */
 #modal { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
 #modal[hidden] { display: none; }
-.sheet { background: var(--bg); width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; border-radius: 22px 22px 0 0;
-  padding: 18px 20px calc(18px + env(safe-area-inset-bottom)); }
+.sheet { background: var(--bg); width: 100%; max-width: 640px; max-height: 78vh; overflow-y: auto; border-radius: 22px 22px 0 0;
+  padding: 0 20px calc(18px + env(safe-area-inset-bottom)); }
+.sheet-top { position: sticky; top: 0; z-index: 2; display: flex; justify-content: flex-end; align-items: center; margin: 0 -20px; padding: 10px 12px 4px; background: var(--bg); }
+.sheet-top .grab { position: absolute; left: 50%; top: 8px; width: 40px; height: 5px; border-radius: 3px; background: var(--line); transform: translateX(-50%); }
+.sheet-x { width: 44px; height: 44px; border-radius: 999px; border: 0; background: var(--text); color: var(--bg); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.coach { margin: 14px 0; padding: 14px 16px; border-radius: 16px; background: var(--inv-bg); color: var(--inv-text); font-size: 1.05rem; font-weight: 600; line-height: 1.35; display: flex; flex-direction: column; gap: 6px; }
+.coach .label { color: var(--inv-muted); }
+.coach.coach-pr { background: var(--signal); color: var(--on-signal); }
+.coach.coach-pr .label { color: var(--on-signal); }
 .sheet h2 { margin-top: 4px; }
 .sheet select, .sheet textarea { margin: 8px 0; }
 #toast { position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px); z-index: 50;

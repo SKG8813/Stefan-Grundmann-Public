@@ -215,3 +215,14 @@ test('routine time model: supersets save time versus straight sets', () => {
   assert.ok(L.routineMinutes(superset, EX) < L.routineMinutes(straight, EX));
   assert.equal(L.routineMinutes([{ exId: 'barbell-bench-press', sets: 3, rest: 150 }], EX), 8); // 3×40 s + 2×150 s + 30 s = 7.5 min
 });
+
+test('coach picks a fitting line and never jokes about an injury flag', async () => {
+  const { coachLine } = await import('../js/coach.js');
+  assert.equal(coachLine({ sets: 20, planned: 20, minutes: 42, prs: 1, seed: 'a' }).kind, 'pr');
+  assert.equal(coachLine({ sets: 8, planned: 20, minutes: 30, seed: 'b' }).kind, 'skipped');
+  assert.equal(coachLine({ sets: 20, planned: 20, minutes: 58, seed: 'c' }).kind, 'long');
+  assert.equal(coachLine({ sets: 20, planned: 20, minutes: 44, rirAvg: 3.5, seed: 'd' }).kind, 'sandbag');
+  const pain = coachLine({ sets: 20, planned: 20, minutes: 44, prs: 2, pains: 1, seed: 'e' });
+  assert.equal(pain.kind, 'pain');
+  assert.equal(coachLine({ seed: 'x' }).text, coachLine({ seed: 'x' }).text);
+});

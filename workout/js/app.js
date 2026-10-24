@@ -5,6 +5,7 @@ import { lineChart } from './charts.js';
 import { HOWTO, videoURL } from './howto.js';
 import { ANIM, mountAnimation } from './anim.js';
 import { ic } from './icons.js';
+import { coachLine } from './coach.js';
 
 let S = load();
 let EX = exerciseMap(S);
@@ -160,7 +161,7 @@ function makeEntry(it, deload, routineId) {
     const ls = last?.sets[k] || last?.sets[last.sets.length - 1];
     const w = lt === 'band' ? 0 : sug.weight ?? (ls ? ls.w : null);
     const r = sug.kind === 'hold' && ls && ls.w === w ? Math.max(ls.r, repMin) : sug.reps;
-    sets.push({ w, r, pw: w, done: false });
+    sets.push({ w, r, pw: w, pr: r, done: false });
   }
   return { exId: it.exId, station: it.station || '', itemNote: it.note || '', repMin, repMax, rest: it.rest ?? ex.rest,
     ss: it.ss || null, ramp, fullSets: it.sets, suggestion: { kind: sug.kind, message: sug.message, head: sugHead(sug, lt) }, sets };
@@ -182,20 +183,43 @@ function sugHead(s, lt) {
     default: return '';
   }
 }
+// What the weight box means, per equipment type.
+function weightLabel(ex) {
+  if (ex.equip === 'dumbbell') return ['LB EACH', 'Weight of one dumbbell, not both.'];
+  if (ex.equip === 'bodyweight') return ['+LB EXTRA', 'Your bodyweight counts automatically. Enter only added weight (plate or backpack); 0 = just you.'];
+  if (ex.equip === 'landmine') return ['LB PLATES', 'Plates on the bar end only; the bar itself isn\'t counted.'];
+  if (L.loadType(ex.equip) === 'load' && ['barbell', 'ezbar', 'trapbar'].includes(ex.equip)) return ['LB TOTAL', `Total weight including the bar (${S.settings.barWeight} lb).`];
+  return ['LB', ''];
+}
+
 const SUG_IC = { up: 'up', tempo: 'up', pain: 'down', pain2: 'alert', stall: 'pause', deload: 'down', return: 'history', hold: 'progress', new: 'plus' };
 
 function startWorkout(routineId) {
   if (S.active) { ui.tab = 'workout'; render(); return; }
   const r = S.routines.find((x) => x.id === routineId);
   const deload = deloadActive();
-  S.active = { id: uid(), date: today(), routineId: r?.id || null, title: r?.name || 'Workout', startedAt: Date.now(), deload, note: '',
+  S.active = { id: uid(), date: today(), routineId: r?.id || null, title: r?.name || 'Workout', startedAt: Date.now(), deload, note: '', planned: null,
     entries: (r?.items || []).filter((it) => EX[it.exId]).map((it) => makeEntry(it, deload, r.id)) };
   ui.warmOpen = null;
+  S.active.planned = S.active.entries.filter((e) => EX[e.exId]?.equip !== 'band').reduce((x, e) => x + e.sets.filter((y) => !y.warmup).length, 0);
   persist();
   ui.tab = 'workout';
   render();
   window.scrollTo(0, 0);
 }
+
+// Minutes left from the remaining sets, rests and any running rest timer.
+function minutesLeft() {
+  const a = S.active;
+  if (!a) return 0;
+  const items = a.entries.filter((e) => EX[e.exId])
+    .map((e) => ({ exId: e.exId, sets: e.sets.filter((x) => !x.done && !x.warmup).length, rest: e.rest, ss: e.ss }))
+    .filter((it) => it.sets > 0);
+  let sec = items.length ? L.routineMinutes(items, EX) * 60 : 0;
+  if (S.timer && !S.timer.fired) sec += Math.max(0, (S.timer.end - Date.now()) / 1000);
+  return { min: Math.round(sec / 60), done: !items.length };
+}
+const leftText = () => { const t = minutesLeft(); return t.done ? 'all sets done' : `~${t.min} min left`; };
 
 const elapsed = () => (S.active ? fmtTime((Date.now() - S.active.startedAt) / 1000) : '');
 
@@ -207,7 +231,7 @@ function warmIsOpen(bands) {
 function viewActive() {
   const a = S.active;
   const [t1, t2] = splitTitle(a.title);
-  let html = `<div class="wk-head"><div><div class="label">${h(t1)}${a.deload ? ' · deload' : ''} · <span id="elapsed">${elapsed()}</span></div><div class="title">${h(t2 || t1)}</div></div><button class="btn" data-act="finish">Finish</button></div>`;
+  let html = `<div class="wk-head"><div><div class="label">${h(t1)}${a.deload ? ' · deload' : ''} · <span id="elapsed">${elapsed()}</span> · <span id="left">${leftText()}</span></div><div class="title">${h(t2 || t1)}</div></div><button class="btn" data-act="finish">Finish</button></div>`;
   const bands = a.entries.map((e, i) => ({ e, i })).filter((x) => EX[x.e.exId]?.equip === 'band');
   if (bands.length) {
     const doneN = bands.filter((x) => x.e.sets.every((s) => s.done)).length;
@@ -252,7 +276,7 @@ function entryCard(e, i, ex) {
   const head = sg.head ?? (sg.message ? 'Tip' : '');
   const painCol = S.settings.rehabMode;
   let html = `<section class="ex ${complete ? 'complete' : ''}">
-    <div class="ex-head"><div class="grow"><h3>${h(ex.name)}${ex.shoulder && S.settings.rehabMode ? ' <span class="tag">shoulder</span>' : ''}</h3>
+    <div class="ex-head"><div class="grow"><h3>${h(ex.name)}${ex.shoulder && S.settings.rehabMode ? ' <span class="tag">shoulder</span>' : ''}${complete ? ` <span class="done-tag">${ic('check', 13)}Done</span>` : ''}</h3>
       <div class="sub">${work.length} × ${e.repMin}–${e.repMax} · rest ${fmtTime(e.rest)}</div></div>
       <div class="ex-tools"><button class="btn ghost small" data-act="howto" data-id="${h(ex.id)}">How to</button>
       <button class="icon-btn" data-act="ex-menu" data-i="${i}" aria-label="More options for ${h(ex.name)}">${ic('more')}</button></div></div>`;
@@ -265,7 +289,9 @@ function entryCard(e, i, ex) {
     html += '</div>';
     if (e.showWhy && sg.message) html += `<p class="why">${h(sg.message)}${e.ramp ? ` Build-up: ${e.ramp} sets for your first 2 sessions of this day, then all ${e.fullSets}.` : ''}</p>`;
   }
-  html += `<div class="sets ${painCol ? '' : 'no-pain'}"><span class="hd">SET</span><span class="hd">${lt === 'bodyweight' ? '+LB' : 'LB'}</span><span class="hd">REPS</span><span></span>${painCol ? '<span></span>' : ''}`;
+  const [wl, hint] = weightLabel(ex);
+  html += `<div class="sets ${painCol ? '' : 'no-pain'}"><div class="srow hd"><span>SET</span><span>${lt === 'band' ? 'BAND' : wl}</span><span>REPS</span><span></span>${painCol ? '<span></span>' : ''}</div>`;
+  if (hint && lt !== 'band') html += `<div class="whint">${h(hint)}</div>`;
   html += e.sets.map((s, j) => setRow(e, i, s, j, lt, painCol)).join('') + '</div></section>';
   return html;
 }
@@ -281,11 +307,11 @@ function setRow(e, i, s, j, lt, painCol) {
   const pain = !painCol ? '' : s.warmup
     ? '<span></span>'
     : `<button class="pain-btn ${s.pain ? 'on' : ''}" data-act="pain" data-i="${i}" data-j="${j}" aria-pressed="${!!s.pain}" aria-label="Shoulder hurt on set ${n}">${ic('alert')}</button>`;
-  let html = `<span class="sn">${n}</span>${w}${r}${done}${pain}`;
+  let html = `<div class="srow ${s.done ? 'done' : ''} ${s.warmup ? 'warm' : ''}"><span class="sn">${s.done ? ic('check', 14) : n}</span>${w}${r}${done}${pain}</div>`;
   if (s.done && !s.warmup && lt !== 'band' && S.settings.askRir) {
     html += s.rir == null
       ? `<div class="rir"><span class="small">Reps left?</span>${[0, 1, 2, 3, 4].map((v) => `<button class="chip" data-act="rir" data-i="${i}" data-j="${j}" data-v="${v}">${v === 4 ? '4+' : v}</button>`).join('')}</div>`
-      : `<button class="rir-tag" data-act="rir-clear" data-i="${i}" data-j="${j}">${s.rir === 4 ? '4+' : s.rir} left in tank · change</button>`;
+      : `<button class="rir-tag" data-act="rir-clear" data-i="${i}" data-j="${j}">${s.rir === 4 ? '4+' : s.rir} left in tank${s.autoRir ? ' (missed your target, so 0)' : ''} · change</button>`;
   }
   return html;
 }
@@ -295,7 +321,7 @@ function finishWorkout() {
   const undone = a.entries.some((e) => e.sets.some((s) => !s.done && !s.warmup));
   if (undone && !confirm('Some sets are not ticked. Finish anyway? Unticked sets are not saved.')) return;
   const session = {
-    id: a.id, date: a.date, title: a.title, routineId: a.routineId, startedAt: a.startedAt, endedAt: Date.now(),
+    id: a.id, date: a.date, title: a.title, routineId: a.routineId, startedAt: a.startedAt, endedAt: Date.now(), planned: a.planned ?? null,
     deload: a.deload, note: a.note || '',
     entries: a.entries.map((e) => ({ exId: e.exId, sets: e.sets.filter((s) => s.done).map((s) => ({
       w: +s.w || 0, r: +s.r || 0, rir: s.rir ?? null, pain: !!s.pain, warmup: !!s.warmup, done: true })) })).filter((e) => e.sets.length),
@@ -360,6 +386,8 @@ function renderTimer() {
 function tick() {
   const el = $('#elapsed');
   if (el) el.textContent = elapsed();
+  const lf = $('#left');
+  if (lf) lf.textContent = leftText();
   const t = S.timer;
   if (!t) return;
   const left = Math.max(0, (t.end - Date.now()) / 1000);
@@ -403,7 +431,7 @@ document.addEventListener('visibilitychange', () => { updateWakeLock(); tick(); 
 function openModal(html) {
   stopAnim();
   const m = $('#modal');
-  m.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}<button class="btn ghost wide" data-act="close-modal">Close</button></div>`;
+  m.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="sheet-top"><span class="grab" aria-hidden="true"></span><button class="sheet-x" data-act="close-modal" aria-label="Close">${ic('x', 22)}</button></div>${html}<button class="btn ghost wide" data-act="close-modal">Close</button></div>`;
   m.hidden = false;
 }
 let stopAnim = () => {};
@@ -421,6 +449,14 @@ function showSummary(id) {
       <div><b>${sum.sets}</b><small>working sets</small></div>
       <div><b>${Math.round(sum.volume).toLocaleString()}</b><small>lb volume${delta != null ? ` (${delta >= 0 ? '+' : ''}${delta}% vs last)` : ''}</small></div>
     </div>`;
+  const lifts = s.entries.filter((e) => EX[e.exId]?.equip !== 'band').flatMap((e) => e.sets.filter((x) => !x.warmup));
+  const rirs = lifts.map((x) => x.rir).filter((x) => x != null);
+  const coach = coachLine({
+    sets: lifts.length, planned: s.planned, minutes: sum.minutes, prs: sum.prs.length, pains: sum.pains.length,
+    rirAvg: rirs.length >= 3 ? rirs.reduce((x, y) => x + y, 0) / rirs.length : null, rirZeros: rirs.filter((x) => x === 0).length,
+    volumeDelta: delta, seed: s.id,
+  });
+  html = html.replace('</p>', `</p><blockquote class="coach coach-${coach.kind}"><span class="label">Coach</span>${h(coach.text)}</blockquote>`);
   if (sum.prs.length) html += card(`<h4>${ic('trophy', 18)} New personal records</h4><ul>${sum.prs.map((p) => `<li>${h(p)}</li>`).join('')}</ul>`, 'good');
   if (sum.pains.length) html += card(`<h4>${ic('alert', 18)} Shoulder flagged</h4> ${h(sum.pains.join(', '))}. Next time these drop ~${S.settings.painDropPct}% and progression pauses.`, 'warn');
   if (s.note) html += `<p><i>${h(s.note)}</i></p>`;
@@ -433,10 +469,15 @@ function showSummary(id) {
   openModal(html);
 }
 
-function platesHTML(target) {
+function platesHTML(target, landmine = false) {
+  if (!target) return '';
+  if (landmine) {
+    // One loaded sleeve, and the weight counts plates only.
+    const p = L.platesPerSide(target * 2, 0, S.settings.plates);
+    return `<p class="plates-out"><b>On the bar end:</b> ${p.perSide.join(' + ') || 'no plates'}</p>${p.ok ? '' : `<p class="warn-t">Can't load exactly. ${p.remainder / 2} lb short with your plates.</p>`}`;
+  }
   const bar = S.settings.barWeight;
   const p = L.platesPerSide(target, bar, S.settings.plates);
-  if (!target) return '';
   if (target < bar) return `<p>Less than the ${bar} lb bar.</p>`;
   return `<p class="plates-out"><b>Each side:</b> ${p.perSide.length ? p.perSide.join(' + ') : 'empty bar'}</p>${p.ok ? '' : `<p class="warn-t">Can't load exactly. ${p.remainder} lb short with your plates.</p>`}`;
 }
@@ -700,6 +741,9 @@ const actions = {
     if (s.w == null || s.w === '') s.w = 0;
     s.done = true;
     s.doneAt = Date.now();
+    // Fewer reps than the target shown means the set went to failure.
+    const target = s.pr ?? e.repMin;
+    if (!s.warmup && lt !== 'band' && +s.r < target && s.rir == null) { s.rir = 0; s.autoRir = true; }
     // Carry a changed weight forward to the sets still showing the old pre-fill.
     if (!s.warmup && s.w !== s.pw) for (const n of e.sets.slice(d.j + 1)) if (!n.done && !n.warmup && n.w === s.pw) { n.w = s.w; n.pw = s.w; }
     const later = e.sets.slice(d.j + 1).some((x) => !x.done);
@@ -716,6 +760,7 @@ const actions = {
   rir: (d) => {
     const s = S.active.entries[d.i].sets[d.j];
     s.rir = s.rir === +d.v ? null : +d.v;
+    s.autoRir = false;
     retime(d.i, d.j); persist(); render();
   },
   pain: (d) => {
@@ -727,7 +772,7 @@ const actions = {
   'add-set': (d) => {
     const e = S.active.entries[d.i];
     const last = [...e.sets].reverse().find((x) => !x.warmup);
-    e.sets.push({ w: last?.w ?? null, r: last?.r ?? e.repMin, pw: last?.w ?? null, done: false });
+    e.sets.push({ w: last?.w ?? null, r: last?.r ?? e.repMin, pw: last?.w ?? null, pr: last?.pr ?? last?.r ?? e.repMin, done: false });
     persist(); render();
   },
   warmup: (d) => {
@@ -742,8 +787,9 @@ const actions = {
   plates: (d) => {
     const e = S.active.entries[d.i];
     const w = (e.sets.find((x) => !x.done && !x.warmup) || e.sets[0])?.w || '';
-    openModal(`<h2>Plate calculator</h2><p class="muted">${S.settings.barWeight} lb bar · plates ${S.settings.plates.join(', ')}</p>
-      <label class="field">Target weight (lb)<input type="number" inputmode="decimal" data-plates value="${h(w)}"></label><div id="plates-out">${platesHTML(+w)}</div>`);
+    const lm = EX[e.exId].equip === 'landmine';
+    openModal(`<h2>Plate calculator</h2><p class="muted">${lm ? 'Landmine: plates on the bar end only' : `${S.settings.barWeight} lb bar, total weight`} · plates ${S.settings.plates.join(', ')}</p>
+      <label class="field">${lm ? 'Plates on the bar end (lb)' : 'Total weight (lb)'}<input type="number" inputmode="decimal" data-plates ${lm ? 'data-lm' : ''} value="${h(w)}"></label><div id="plates-out">${platesHTML(+w, lm)}</div>`);
   },
   swap: (d) => {
     const e = S.active.entries[d.i], ex = EX[e.exId];
@@ -815,7 +861,7 @@ const actions = {
     persist(); render();
   },
   'sug-toggle': (d) => { const e = S.active.entries[d.i]; e.showWhy = !e.showWhy; persist(); render(); },
-  'rir-clear': (d) => { S.active.entries[d.i].sets[d.j].rir = null; persist(); render(); },
+  'rir-clear': (d) => { const s = S.active.entries[d.i].sets[d.j]; s.rir = null; s.autoRir = false; persist(); render(); },
   'timer-big': () => { ui.bigTimer = !ui.bigTimer; renderTimer(); },
   'ex-menu': (d) => {
     const e = S.active.entries[d.i], ex = EX[e.exId], lt = L.loadType(ex.equip);
@@ -1002,7 +1048,7 @@ document.addEventListener('input', (ev) => {
   } else if (t.dataset.bind === 'active-note' && S.active) {
     S.active.note = t.value; persistSoon();
   } else if (t.dataset.plates != null) {
-    $('#plates-out').innerHTML = platesHTML(parseFloat(t.value) || 0);
+    $('#plates-out').innerHTML = platesHTML(parseFloat(t.value) || 0, t.dataset.lm != null);
   }
 });
 
