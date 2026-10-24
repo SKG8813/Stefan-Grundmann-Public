@@ -275,7 +275,8 @@ function entryCard(e, i, ex) {
   const sg = e.suggestion || {};
   const head = sg.head ?? (sg.message ? 'Tip' : '');
   const painCol = S.settings.rehabMode;
-  let html = `<section class="ex ${complete ? 'complete' : ''}">
+  const party = complete && e.justDone && Date.now() - e.justDone < 1500;
+  let html = `<section class="ex ${complete ? 'complete' : ''} ${party ? 'celebrate' : ''}">${party ? `<div class="confetti" aria-hidden="true">${Array.from({ length: 14 }, (_, k) => `<i style="--a:${k * 26}deg;--d:${52 + (k % 4) * 14}px"></i>`).join('')}</div>` : ''}
     <div class="ex-head"><div class="grow"><h3>${h(ex.name)}${ex.shoulder && S.settings.rehabMode ? ' <span class="tag">shoulder</span>' : ''}${complete ? ` <span class="done-tag">${ic('check', 13)}Done</span>` : ''}</h3>
       <div class="sub">${work.length} × ${e.repMin}–${e.repMax} · rest ${fmtTime(e.rest)}</div></div>
       <div class="ex-tools"><button class="btn ghost small" data-act="howto" data-id="${h(ex.id)}">How to</button>
@@ -741,6 +742,7 @@ const actions = {
     if (s.w == null || s.w === '') s.w = 0;
     s.done = true;
     s.doneAt = Date.now();
+    if (!s.warmup && e.sets.filter((x) => !x.warmup).every((x) => x.done)) { e.justDone = Date.now(); navigator.vibrate?.([30, 40, 60]); }
     // Fewer reps than the target shown means the set went to failure.
     const target = s.pr ?? e.repMin;
     if (!s.warmup && lt !== 'band' && +s.r < target && s.rir == null) { s.rir = 0; s.autoRir = true; }
