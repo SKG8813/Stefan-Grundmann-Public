@@ -151,10 +151,9 @@ textarea { resize: vertical; }
 .sets .num { font-size: 1.3rem; font-weight: 600; min-height: 46px; padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--bg); }
 .sets .num:focus { border-color: var(--text); }
 .sets .num.band { display: flex; align-items: center; color: var(--muted); font-size: .9rem; font-weight: 500; border-style: dashed; }
-.srow.done { background: color-mix(in srgb, var(--signal) 22%, transparent); }
-.srow.done .num { border-color: transparent; background: transparent; font-weight: 800; }
+.srow.done .num { border-color: transparent; background: transparent; font-weight: 700; }
 .srow.done .sn { color: var(--text); }
-.srow.done .done-btn { background: var(--signal); border-color: var(--signal); color: var(--on-signal); }
+.srow.done .done-btn { background: var(--text); border-color: var(--text); color: var(--bg); }
 .srow.warm .num { color: var(--muted); font-size: 1rem; }
 .done-tag { display: inline-flex; align-items: center; gap: 3px; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--on-signal); background: var(--signal); border-radius: 999px; padding: 2px 8px 2px 6px; vertical-align: 4px; }
 .ex.complete .ex-head h3 { color: var(--text); }
@@ -303,3 +302,23 @@ details.group > div { padding: 0 0 16px; }
 /* Supersets and time estimates */
 .ss-label { display: flex; flex-direction: column; gap: 2px; margin: 18px 0 2px; padding-left: 12px; border-left: 3px solid var(--text); font-size: .85rem; color: var(--muted); }
 .r-card .r-meta { margin-top: 6px; font-weight: 600; color: var(--text); }
+
+/* A finished exercise turns teal as one block, with a short celebration. */
+.ex { position: relative; }
+.ex.complete { background: color-mix(in srgb, var(--signal) 24%, var(--bg)); border-bottom-color: transparent; border-radius: 20px; padding: 14px 14px 16px; margin: 12px -14px; }
+.ex.complete .num, .ex.complete .num.band { background: transparent; border-color: transparent; }
+.ex.complete .btn.ghost, .ex.complete .chip { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
+.ex.complete .sug:not(.up):not(.tempo) { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
+.ex.celebrate { animation: pop .55s cubic-bezier(.2, 1.4, .4, 1); }
+.ex.celebrate .done-tag { animation: badge .6s .1s both cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pop { 0% { transform: scale(.97); } 60% { transform: scale(1.015); } 100% { transform: scale(1); } }
+.ex.celebrate::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--signal); pointer-events: none; animation: flash .7s ease-out forwards; }
+@keyframes flash { from { opacity: .85; } to { opacity: 0; } }
+@keyframes badge { from { transform: scale(0) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.confetti { position: absolute; left: 50%; top: 34px; width: 0; height: 0; pointer-events: none; z-index: 3; }
+.confetti i { position: absolute; width: 7px; height: 7px; border-radius: 2px; background: var(--text); opacity: 0;
+  animation: burst .9s ease-out forwards; transform: rotate(var(--a)) translateY(0); }
+.confetti i:nth-child(3n) { background: var(--signal); border-radius: 50%; }
+.confetti i:nth-child(3n+1) { width: 4px; height: 10px; }
+@keyframes burst { 0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--d))) scale(.6); } }
+@media (prefers-reduced-motion: reduce) { .ex.celebrate, .ex.celebrate .done-tag, .confetti i { animation: none; } .confetti, .ex.celebrate::after { display: none; } }
