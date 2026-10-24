@@ -14,7 +14,7 @@ For the public version of REP, everything specific to the owner's shoulder injur
   - slower progression on lifts that load that joint (today: 3 clean sessions instead of 2)
   - lower restart percentage after a long break (today: 60% for shoulder lifts)
   - injury-specific tips on the How to screen
-  - the "Old versus pre-injury best" comparison, with an injury date per mode
+  - the injury-date marker and pre-injury-best comparison on progress charts, with a date per mode
   - the "check with your physio" escalation after repeated flags
   - coach lines that respect the flag
 - **Code changes:**
