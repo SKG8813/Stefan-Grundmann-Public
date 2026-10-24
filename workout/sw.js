@@ -1,8 +1,8 @@
 // Offline cache for the app shell. Bump VERSION whenever app files change.
-const VERSION = 'rep-v9';
+const VERSION = 'rep-v10';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
-  'js/app.js', 'js/data.js', 'js/logic.js', 'js/store.js', 'js/charts.js', 'js/howto.js', 'js/anim.js', 'js/icons.js',
+  'js/app.js', 'js/data.js', 'js/logic.js', 'js/store.js', 'js/charts.js', 'js/howto.js', 'js/anim.js', 'js/icons.js', 'js/coach.js',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
 ];
 
