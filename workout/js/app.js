@@ -275,7 +275,7 @@ function entryCard(e, i, ex) {
   const sg = e.suggestion || {};
   const head = sg.head ?? (sg.message ? 'Tip' : '');
   const painCol = S.settings.rehabMode;
-  const party = complete && e.justDone && Date.now() - e.justDone < 1500;
+  const party = complete && e.justDone && Date.now() - e.justDone < 3000;
   let html = `<section class="ex ${complete ? 'complete' : ''} ${party ? 'celebrate' : ''}">${party ? `<div class="confetti" aria-hidden="true">${Array.from({ length: 14 }, (_, k) => `<i style="--a:${k * 26}deg;--d:${52 + (k % 4) * 14}px"></i>`).join('')}</div>` : ''}
     <div class="ex-head"><div class="grow"><h3>${h(ex.name)}${ex.shoulder && S.settings.rehabMode ? ' <span class="tag">shoulder</span>' : ''}${complete ? ` <span class="done-tag">${ic('check', 13)}Done</span>` : ''}</h3>
       <div class="sub">${work.length} × ${e.repMin}–${e.repMax} · rest ${fmtTime(e.rest)}</div></div>
