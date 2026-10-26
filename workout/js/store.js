@@ -28,6 +28,7 @@ export const DEFAULT_SETTINGS = {
   apiKey: '',
   model: 'claude-opus-5-5',
   theme: 'auto',
+  buildUp: false,
   proteinPerKg: 1.6,
   programStart: '',
 };

@@ -142,7 +142,7 @@ function viewWorkout() {
 
 // Build-up: the first 2 sessions of a routine since the program started use `ramp` sets.
 function rampSets(it, routineId) {
-  if (!it.ramp || !routineId) return null;
+  if (!S.settings.buildUp || !it.ramp || !routineId) return null;
   const since = S.settings.programStart || '';
   const done = S.sessions.filter((x) => x.routineId === routineId && x.date >= since).length;
   return done < 2 ? Math.min(it.ramp, it.sets ?? 3) : null;
@@ -286,9 +286,9 @@ function entryCard(e, i, ex) {
   if (head || e.ramp) {
     html += '<div class="chips">';
     if (head) html += `<button class="sug ${h(sg.kind)}" data-act="sug-toggle" data-i="${i}" aria-expanded="${!!e.showWhy}">${ic(SUG_IC[sg.kind] || 'progress', 14)}${h(head)}</button>`;
-    if (e.ramp) html += `<span class="sug" style="cursor:default">Build-up · ${e.ramp} of ${e.fullSets} sets</span>`;
+    if (e.ramp) html += `<button class="sug" data-act="sug-toggle" data-i="${i}" aria-expanded="${!!e.showWhy}">Build-up · ${e.ramp} of ${e.fullSets} sets</button>`;
     html += '</div>';
-    if (e.showWhy && sg.message) html += `<p class="why">${h(sg.message)}${e.ramp ? ` Build-up: ${e.ramp} sets for your first 2 sessions of this day, then all ${e.fullSets}.` : ''}</p>`;
+    if (e.showWhy && (sg.message || e.ramp)) html += `<p class="why">${h(sg.message || '')}${e.ramp ? ` Build-up: ${e.ramp} of ${e.fullSets} sets for your first 2 sessions of this day so the shoulder can adapt to the extra volume, then all ${e.fullSets}. Turn it off in Settings › Training.` : ''}</p>`;
   }
   const [wl, hint] = weightLabel(ex);
   html += `<div class="sets ${painCol ? '' : 'no-pain'}"><div class="srow hd"><span>SET</span><span>${lt === 'band' ? 'BAND' : wl}</span><span>REPS</span><span></span>${painCol ? '<span></span>' : ''}</div>`;
@@ -701,6 +701,7 @@ function viewSettings() {
     <label class="field">Rehab note (stays on this phone; included in Claude reviews)<textarea data-setting="rehabNote" rows="2" placeholder="e.g. physio guidance, movements to avoid">${h(st.rehabNote)}</textarea></label>
     <p class="muted small">General guidance, not medical advice. If pain is sharp, lingers, or keeps coming back, stop that lift and check with your physio.</p>`)}
   ${grp('Training', `<div class="grid2">${num('deloadWeeks', 'Deload every (weeks)')}</div>
+    ${chk('buildUp', 'Build-up: fewer sets on the main chest lifts for the first 2 sessions of each push day after a program change')}
     ${chk('askRir', 'Ask "reps left in tank" after each set')}${chk('sound', 'Beep when rest is over')}
     <button class="btn small ghost" data-act="test-sound">Test beep</button>`)}
   ${grp('How rest times are chosen', `
@@ -1045,7 +1046,18 @@ document.addEventListener('input', (ev) => {
   const t = ev.target;
   if (t.dataset.set && S.active) {
     const [i, j, f] = t.dataset.set.split('.');
-    S.active.entries[+i].sets[+j][f] = t.value === '' ? null : parseFloat(t.value);
+    const e = S.active.entries[+i], s = e.sets[+j];
+    const prev = s[f], val = t.value === '' ? null : parseFloat(t.value);
+    s[f] = val;
+    if (f === 'w' && !s.warmup) {
+      e.sets.forEach((n, k) => {
+        if (k <= +j || n.done || n.warmup || n.w !== prev) return;
+        n.w = val; n.pw = val;
+        const box = document.querySelector(`input[data-set="${i}.${k}.w"]`);
+        if (box) box.value = val ?? '';
+      });
+      s.pw = val;
+    }
     persistSoon();
   } else if (t.dataset.bind === 'active-note' && S.active) {
     S.active.note = t.value; persistSoon();
