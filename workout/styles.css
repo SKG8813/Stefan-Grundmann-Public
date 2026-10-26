@@ -322,3 +322,6 @@ details.group > div { padding: 0 0 16px; }
 .confetti i:nth-child(3n+1) { width: 4px; height: 10px; }
 @keyframes burst { 0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--d))) scale(.6); } }
 @media (prefers-reduced-motion: reduce) { .ex.celebrate, .ex.celebrate .done-tag, .confetti i { animation: none; } .confetti, .ex.celebrate::after { display: none; } }
+
+.stat-edit { padding: 12px 8px 12px 0; background: none; border: 0; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.stat-edit small { text-decoration: underline; text-underline-offset: 2px; }

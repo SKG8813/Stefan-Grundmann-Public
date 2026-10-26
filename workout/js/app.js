@@ -321,8 +321,16 @@ function finishWorkout() {
   const a = S.active;
   const undone = a.entries.some((e) => e.sets.some((s) => !s.done && !s.warmup));
   if (undone && !confirm('Some sets are not ticked. Finish anyway? Unticked sets are not saved.')) return;
+  // Length = first to last ticked set, so forgetting to hit Finish doesn't inflate it.
+  let startedAt = a.startedAt, endedAt = Date.now();
+  const stamps = a.entries.flatMap((e) => e.sets.filter((x) => x.done && x.doneAt).map((x) => x.doneAt));
+  if (stamps.length) {
+    const first = Math.min(...stamps), last = Math.max(...stamps);
+    if (first - startedAt > 10 * 60000) startedAt = first - 60000;
+    endedAt = Math.min(endedAt, last + 60000);
+  }
   const session = {
-    id: a.id, date: a.date, title: a.title, routineId: a.routineId, startedAt: a.startedAt, endedAt: Date.now(), planned: a.planned ?? null,
+    id: a.id, date: a.date, title: a.title, routineId: a.routineId, startedAt, endedAt, planned: a.planned ?? null,
     deload: a.deload, note: a.note || '',
     entries: a.entries.map((e) => ({ exId: e.exId, sets: e.sets.filter((s) => s.done).map((s) => ({
       w: +s.w || 0, r: +s.r || 0, rir: s.rir ?? null, pain: !!s.pain, warmup: !!s.warmup, done: true })) })).filter((e) => e.sets.length),
@@ -446,7 +454,7 @@ function showSummary(id) {
   const delta = sum.lastVolume ? Math.round(((sum.volume - sum.lastVolume) / sum.lastVolume) * 100) : null;
   let html = `<h2>${h(s.title || 'Workout')}</h2><p class="muted">${h(s.date)}${s.deload ? ' · deload' : ''}</p>
     <div class="stats">
-      ${sum.minutes != null ? `<div><b>${sum.minutes}</b><small>minutes</small></div>` : ''}
+      <button class="stat-edit" data-act="edit-minutes" data-id="${h(s.id)}" aria-label="Edit workout length"><b>${sum.minutes ?? '–'}</b><small>minutes · edit</small></button>
       <div><b>${sum.sets}</b><small>working sets</small></div>
       <div><b>${Math.round(sum.volume).toLocaleString()}</b><small>lb volume${delta != null ? ` (${delta >= 0 ? '+' : ''}${delta}% vs last)` : ''}</small></div>
     </div>`;
@@ -860,7 +868,7 @@ const actions = {
   'band-done': (d) => {
     const e = S.active.entries[d.i];
     const all = e.sets.every((s) => s.done);
-    for (const s of e.sets) { s.done = !all; if (!all) { s.r = s.r ?? e.repMax; s.w = 0; } }
+    for (const s of e.sets) { s.done = !all; if (!all) { s.r = s.r ?? e.repMax; s.w = 0; s.doneAt = Date.now(); } }
     persist(); render();
   },
   'sug-toggle': (d) => { const e = S.active.entries[d.i]; e.showWhy = !e.showWhy; persist(); render(); },
@@ -886,6 +894,16 @@ const actions = {
   'end-deload': () => { S.settings.deloadUntil = ''; persist(); render(); },
   'snooze-deload': () => { S.settings.deloadSnooze = addDays(today(), 7); persist(); render(); },
   session: (d) => showSummary(d.id),
+  'edit-minutes': (d) => {
+    const s = S.sessions.find((x) => x.id === d.id);
+    if (!s) return;
+    const cur = s.startedAt && s.endedAt ? Math.round((s.endedAt - s.startedAt) / 60000) : '';
+    const v = parseInt(prompt('How long was this workout, in minutes?', cur), 10);
+    if (!(v > 0 && v < 300)) return;
+    s.startedAt = s.startedAt || Date.parse(`${s.date}T12:00:00`);
+    s.endedAt = s.startedAt + v * 60000;
+    persist(); showSummary(s.id);
+  },
   'delete-session': (d) => {
     if (!confirm('Delete this workout permanently?')) return;
     S.sessions = S.sessions.filter((s) => s.id !== d.id);
