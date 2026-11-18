@@ -325,3 +325,7 @@ details.group > div { padding: 0 0 16px; }
 
 .stat-edit { padding: 12px 8px 12px 0; background: none; border: 0; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .stat-edit small { text-decoration: underline; text-underline-offset: 2px; }
+
+/* While the keyboard is up, hide the bars iOS would otherwise float over the page. */
+body.typing #timer, body.typing #nav { display: none; }
+body.typing, body.typing.has-timer { padding-bottom: 40vh; }
