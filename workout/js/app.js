@@ -399,6 +399,9 @@ function tick() {
   if (lf) lf.textContent = leftText();
   const t = S.timer;
   if (!t) return;
+  // Clear a finished timer here, not with a one-off timeout, so it can't get stuck
+  // when the app was backgrounded or reloaded around the moment rest ended.
+  if (t.fired && Date.now() - t.end > 8000) { S.timer = null; ui.bigTimer = false; persist(); renderTimer(); return; }
   const left = Math.max(0, (t.end - Date.now()) / 1000);
   const tl = $('#tleft'), tb = $('#tbar');
   if (tl) tl.textContent = fmtTime(Math.ceil(left));
@@ -411,7 +414,6 @@ function tick() {
     document.body.classList.add('flash');
     setTimeout(() => document.body.classList.remove('flash'), 1600);
     renderTimer();
-    setTimeout(() => { if (S.timer === t) { S.timer = null; persist(); renderTimer(); } }, 8000);
   }
 }
 setInterval(tick, 250);
@@ -434,6 +436,11 @@ async function updateWakeLock() {
   }
 }
 document.addEventListener('visibilitychange', () => { updateWakeLock(); tick(); });
+
+// iOS floats fixed bars over the page while the keyboard is open; hide them while typing.
+const isField = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') && el.type !== 'checkbox' && el.type !== 'file';
+document.addEventListener('focusin', (ev) => { if (isField(ev.target)) document.body.classList.add('typing'); });
+document.addEventListener('focusout', () => setTimeout(() => { if (!isField(document.activeElement)) document.body.classList.remove('typing'); }, 50));
 
 // ---------- modals ----------
 
